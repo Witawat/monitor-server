@@ -1,0 +1,45 @@
+# ตัวอย่าง config (TOML) — คัดลอกไป config.toml แล้วแก้ (ห้าม commit config.toml)
+
+[server]
+host = "127.0.0.1"     # 0.0.0.0 ถ้าให้ agent/คนเข้าจากนอก
+port = 18080
+data_dir = "data"
+log_dir = "logs"
+
+[webui]
+admin_user = "admin"
+admin_pass_hash = "$2b$12$..."   # gen: python -m server.webui.auth --hash "รหัสผ่าน"
+secret_key = "เปลี่ยนเป็นค่าสุ่มยาวๆ"
+setup_done = false
+
+[ingest]
+rate_limit_per_min = 1200
+max_batch_size = 100
+offline_timeout_sec = 60
+
+[storage]
+retention_raw_days = 7
+rollup_intervals = ["1m", "5m", "1h", "1d"]
+wal = true
+
+[alerting]
+enabled = true
+
+[alerting.notifiers.webhook]
+url = ""
+
+[alerting.notifiers.telegram]
+bot_token = ""
+chat_id = ""
+
+[[alerting.rules]]
+name = "CPU สูง"
+host_id = ""                 # ว่าง = ทุก host
+metric = "cpu_percent"
+op = ">"
+threshold = 90.0
+duration = "5m"              # ต้องเกินต่อเนื่องนานแค่ไหน
+notify = ["webhook", "telegram"]
+
+[auth]
+allow_registration = true
