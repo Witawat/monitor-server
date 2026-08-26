@@ -303,6 +303,7 @@
       const h = document.getElementById('tgHelp');
       h.style.display = h.style.display === 'none' ? 'block' : 'none';
     };
+    document.getElementById('changePassBtn').onclick = changePassword;
     document.querySelectorAll('#notifWizard .wiz-opt').forEach((b) => {
       b.onclick = () => focusChannel(b.dataset.wiz);
     });
@@ -422,6 +423,26 @@
     card.classList.add('flash');
     const first = card.querySelector('input');
     if (first) setTimeout(() => first.focus(), 350);
+  }
+
+  async function changePassword() {
+    const oldP = document.getElementById('oldPassword').value;
+    const newP = document.getElementById('newPassword').value;
+    const conf = document.getElementById('confirmPassword').value;
+    const res = document.getElementById('changePassResult');
+    if (!oldP || !newP) { showResult('changePassResult', false, 'กรอกให้ครบทั้งสองช่อง'); return; }
+    if (newP !== conf) { showResult('changePassResult', false, 'รหัสผ่านใหม่กับยืนยันไม่ตรง'); return; }
+    try {
+      await api('/api/v1/auth/password', {
+        method: 'POST',
+        body: JSON.stringify({ old_password: oldP, new_password: newP, confirm_password: conf }),
+      });
+      showResult('changePassResult', true, 'เปลี่ยนรหัสผ่านแล้ว (มีผลทันที)');
+      document.getElementById('oldPassword').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+      toast('success', I18N.saved);
+    } catch (e) { showResult('changePassResult', false, e.message); }
   }
 
   window.AlertsView = { loadAlerts, loadSettings };

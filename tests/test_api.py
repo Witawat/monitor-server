@@ -400,3 +400,50 @@ def test_login_success_audit(tmp_path):
     with _client(tmp_path, authed=True) as c:
         audit = c.get("/api/v1/auth/audit").json()
         assert any(a["action"] == "login.ok" and a["ok"] == 1 for a in audit)
+
+
+def test_change_password_flow(tmp_path):
+    """เปลี่ยนรหัสผ่าน: ตรวจรหัสเก่า → ตั้งใหม่ → login ใหม่ได้, เก่าใช้ไม่ได้."""
+
+    with _client(tmp_path, authed=False) as c:
+        assert c.post("/api/v1/auth/login", json={"username": "admin", "password": "secretpw"}).status_code == 200
+
+    with _client(tmp_path, authed=True) as c:
+        r = c.post(
+            "/api/v1/auth/password",
+            json={"old_password": "secretpw", "new_password": "newpass123", "confirm_password": "newpass123"},
+        )
+        assert r.status_code == 200
+
+    with _client(tmp_path, authed=False) as c:
+        assert c.post("/api/v1/auth/login", json={"username": "admin", "password": "secretpw"}).status_code == 401
+        assert c.post("/api/v1/auth/login", json={"username": "admin", "password": "newpass123"}).status_code == 200
+
+
+def test_change_password_too_short(tmp_path):
+    """รหัสใหม่สั้นเกิน 8 → 400; ยืนยันไม่ตรง → 400."""
+
+    with _client(tmp_path, authed=True) as c:
+        assert c.post(
+            "/api/v1/auth/password",
+            json={"old_password": "x", "new_password": "abc", "confirm_password": "abc"},
+        ).status_code == 400
+    with _client(tmp_path, authed=False) as c:
+        # login เก่ายังใช้ได้ (ยังไม่เปลี่ยน)
+        assert c.post("/api/v1/auth/login", json={"username": "admin", "password": "secretpw"}).status_code == 200
+
+
+def test_setup_auto_fill(tmp_path):
+    """/setup คืน creds ครั้งแรก แล้วหายหลัง login สำเร็จ."""
+
+    cfg = AppConfig()
+    cfg.server.data_dir = str(tmp_path)
+    cfg.webui.admin_pass_hash = hash_password("adminpw")
+    client = TestClient(create_app(cfg, setup_credentials=("admin", "setupsecret")))
+    client.__enter__()
+    try:
+        assert client.get("/api/v1/auth/setup").json() == {"user": "admin", "pass": "setupsecret"}
+        assert client.post("/api/v1/auth/login", json={"username": "admin", "password": "adminpw"}).status_code == 200
+        assert client.get("/api/v1/auth/setup").status_code == 404
+    finally:
+        client.__exit__(None, None, None)

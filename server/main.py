@@ -56,16 +56,17 @@ def _resolve_config_path(configured: str) -> str:
     return configured
 
 
-def _ensure_config(path: str) -> str:
+def _ensure_config(path: str) -> tuple[str, str | None, str | None]:
     """ถ้า exe (frozen) ยังไม่มี config ให้สร้าง default ข้าง exe + รหัสผ่าน admin ใหม่.
 
     Returns:
-        เส้นทาง config ที่จะใช้ (สร้างแล้ว ถ้าเป็น frozen ครั้งแรก).
+        (path, setup_user, setup_pass) — setup_* จะมีค่าเฉพาะครั้งแรกที่ exe
+        สร้าง config (เพื่อ auto-fill หน้า login); ครั้งถัดไปเป็น None.
     """
     if Path(path).is_file():
-        return path
+        return path, None, None
     if not getattr(sys, "frozen", False):
-        return path  # dev ปล่อยให้ error ระบุเอง
+        return path, None, None  # dev ปล่อยให้ error ระบุเอง
     pw = secrets.token_urlsafe(12)
     cfg_path = _runtime_dir() / "config.toml"
     cfg_path.write_text(
@@ -85,7 +86,7 @@ def _ensure_config(path: str) -> str:
     )
     print(f"[monitor-server] สร้าง config.toml แล้ว: {cfg_path}")
     print(f"[monitor-server] เข้าสู่ระบบครั้งแรก: admin / {pw}")
-    return str(cfg_path)
+    return str(cfg_path), "admin", pw
 
 
 def _resolve_dir(value: str) -> Path:
@@ -120,13 +121,26 @@ def _resolve_secret(configured: str, data_dir: Path) -> str:
 # ── app factory ──
 
 
-def create_app(config: AppConfig | None = None) -> FastAPI:
-    """สร้าง FastAPI app พร้อม lifespan (เปิด DB + mount routers + webui)."""
+def create_app(
+    config: AppConfig | None = None,
+    setup_credentials: tuple[str, str] | None = None,
+) -> FastAPI:
+    """สร้าง FastAPI app พร้อม lifespan (เปิด DB + mount routers + webui).
+
+    Args:
+        config: config ที่โหลดแล้ว (หรือสร้าง default).
+        setup_credentials: (username, password) ของครั้งแรกที่ exe สร้าง —
+            ใช้ auto-fill หน้า login แล้วลบหลัง login สำเร็จ.
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cfg = config or AppConfig()
         app.state.config = cfg
+        if setup_credentials:
+            app.state.setup_user, app.state.setup_pass = setup_credentials
+        else:
+            app.state.setup_user, app.state.setup_pass = None, None
         data_dir = _resolve_dir(cfg.server.data_dir)
         data_dir.mkdir(parents=True, exist_ok=True)
         app.state.session_secret = _resolve_secret(cfg.webui.secret_key, data_dir)
@@ -293,9 +307,12 @@ def main() -> None:
     import uvicorn
 
     args = _parse_args()
-    cfg_path = _ensure_config(_resolve_config_path(args.config))
+    cfg_path, setup_user, setup_pass = _ensure_config(_resolve_config_path(args.config))
     config = load_config(cfg_path)
-    app = create_app(config)
+    setup_credentials: tuple[str, str] | None = (
+        (setup_user, setup_pass) if setup_user and setup_pass else None
+    )
+    app = create_app(config, setup_credentials)
     if not args.no_browser:
         _open_browser(config.server.host, config.server.port)
     uvicorn.run(app, host=config.server.host, port=config.server.port)

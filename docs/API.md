@@ -94,6 +94,8 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 ### `POST /api/v1/auth/logout`
 ### `GET /api/v1/auth/me` — ข้อมูลผู้ใช้ปัจจุบัน
 ### `GET /api/v1/auth/audit` *(admin)* — ประวัติความปลอดภัย (login สำเร็จ/ล้มเหลว/ถูกจำกัด) เรียงใหม่ก่อน 50 รายการ
+### `GET /api/v1/auth/setup` — คืน username/password ครั้งแรกที่ exe สร้าง (auto-fill หน้า login); `404` หลัง login สำเร็จหรือใน dev
+### `POST /api/v1/auth/password` *(admin)* — เปลี่ยนรหัสผ่าน: `{"old_password","new_password","confirm_password"}` → เก็บ hash ใหม่ใน DB (มีผลทันที ไม่ restart); ตรวจรหัสเก่า + รหัสใหม่ ≥ 8 ตัว
 ### `GET /api/v1/auth/tokens` *(admin)* — list agent tokens
 ### `POST /api/v1/auth/tokens` *(admin)* — gen token ต่อ host_id
 ### `DELETE /api/v1/auth/tokens/{host_id}` *(admin)* — revoke

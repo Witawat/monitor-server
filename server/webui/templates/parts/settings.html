@@ -20,6 +20,27 @@
     <tbody id="auditTable"></tbody>
   </table>
 
+  <h3 style="color:var(--text-2);margin:16px 0 8px">เปลี่ยนรหัสผ่าน</h3>
+  <div class="notif-card" style="max-width:420px">
+    <div class="field">
+      <label for="oldPassword">รหัสผ่านปัจจุบัน</label>
+      <input id="oldPassword" type="password" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label for="newPassword">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label>
+      <input id="newPassword" type="password" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+      <input id="confirmPassword" type="password" autocomplete="new-password">
+    </div>
+    <div class="notif-row" style="margin-top:12px">
+      <span class="spacer"></span>
+      <button class="btn primary" id="changePassBtn">เปลี่ยนรหัสผ่าน</button>
+    </div>
+    <p class="notif-result" id="changePassResult"></p>
+  </div>
+
   <h3 style="color:var(--text-2);margin:24px 0 8px">การแจ้งเตือน (Webhook / Telegram)</h3>
   <p class="hint">ตั้งค่าช่องทางรับการแจ้งเตือน alert — บันทึกแล้วมีผลทันที (ไม่ต้อง restart server)</p>
   <div class="notif-grid">
