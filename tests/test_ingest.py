@@ -41,7 +41,7 @@ def _batch(**overrides):
 async def test_auto_register_new_token(service):
     """token ใหม่ + allow_registration=True → สร้าง host ใหม่."""
 
-    received, host_id = await service.process_batch("tok-new", "1.1.1.1", _batch())
+    received, host_id, _cfg = await service.process_batch("tok-new", "1.1.1.1", _batch())
     assert received == 1
     assert host_id == "h1"
     assert await service._db.host_by_token("tok-new") is not None
@@ -51,7 +51,7 @@ async def test_known_token_updates_last_seen(service):
     """token เดิม → ใช้ host เดิม ไม่สร้างซ้ำ."""
 
     await service.process_batch("tok-a", "1.1.1.1", _batch())
-    _, host_id = await service.process_batch("tok-a", "1.1.1.1", _batch())
+    _, host_id, _cfg = await service.process_batch("tok-a", "1.1.1.1", _batch())
     assert host_id == "h1"
 
 

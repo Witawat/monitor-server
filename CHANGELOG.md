@@ -8,6 +8,8 @@
 
 ### เพิ่ม
 - WebUI เป็นหน้าเดียวเลื่อนยาว (long page) — ไม่มี sidebar, เมนูนำทาง (Fleet/Alerts/ตั้งค่า) เป็น topnav แนวนอนใน topbar, คลิกการ์ด → เลือก host + scroll ไป section Host
+- **ปุ่ม "แก้ไขค่า Host"**: modal แก้ hostname/tags + remote config (interval/watch/ports/max_batch) ที่ agent จะ pull ไปใช้ในรอบถัดไป (ไม่ต้อง restart) + ลบ host แบบ confirm
+- **Remote config (agent)**: server เก็บ desired_config ต่อ host (DB) + คืนให้ agent ผ่าน ingest response → agent เปลี่ยน interval/watch/ports/max_batch แบบ live โดยไม่ restart (ตามที่ตั้งใน WebUI)
 - input/select/textarea/checkbox เป็นกล่องสไตล์เดียวกันทั้งหมด (rule กลางใน app.css)
 - Fleet: OS icon (linux/windows/mac จาก `platform`) + แถบสถิติ (จำนวน/ออนไลน์/ออฟไลน์/Linux/Windows) เมื่อมีหลาย server
 - กราฟย้อนหลังสูงสุด 45 วัน: `retention_raw_days` default 45 + range 30d/45d ใน API/chart/export

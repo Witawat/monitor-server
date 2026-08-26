@@ -77,8 +77,13 @@ class Backoff:
 
 def push_batch_status(
     url: str, token: str, batch: list[dict[str, Any]], timeout: float = _TIMEOUT_SEC
-) -> int:
-    """POST batch ไป server; คืน HTTP status code (0 = network/offline error)."""
+) -> tuple[int, dict[str, Any]]:
+    """POST batch ไป server; คืน (HTTP status, remote_config).
+
+    Notes:
+        remote_config ว่างถ้า server ยังไม่ตั้งค่า config ระยะไกล (หรือ network error
+        คืน (0, {})). ฝั่ง agent ใช้ config นี้ปรับ interval/watch/ports โดยไม่ restart.
+    """
 
     data = json.dumps(batch).encode("utf-8")
     req = urllib.request.Request(
@@ -89,14 +94,30 @@ def push_batch_status(
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return int(resp.status)
+            body = resp.read().decode("utf-8", "replace")
+            cfg: dict[str, Any] = {}
+            try:
+                parsed = json.loads(body)
+                if isinstance(parsed, dict):
+                    cfg = parsed.get("config") or {}
+            except (json.JSONDecodeError, ValueError):
+                pass
+            return int(resp.status), cfg
     except urllib.error.HTTPError as exc:
-        return int(exc.code)
+        # อ่าน body ด้วย (เผื่อ 4xx มี message) — คืน config ว่าง
+        err_cfg: dict[str, Any] = {}
+        try:
+            body = exc.read().decode("utf-8", "replace")
+            err_cfg = {"_error": body} if body else {}
+        except Exception:  # noqa: BLE001
+            err_cfg = {}
+        return int(exc.code), err_cfg
     except OSError:
-        return 0  # offline / connection refused / timeout
+        return 0, {}  # offline / connection refused / timeout
 
 
 def push_batch(url: str, token: str, batch: list[dict[str, Any]], timeout: float = _TIMEOUT_SEC) -> bool:
     """POST batch ไป server; คืน True ถ้าได้รับ 2xx."""
 
-    return 200 <= push_batch_status(url, token, batch, timeout) < 300
+    status, _ = push_batch_status(url, token, batch, timeout)
+    return 200 <= status < 300

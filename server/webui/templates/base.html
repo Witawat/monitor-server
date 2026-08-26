@@ -67,7 +67,6 @@
 <div class="modal-overlay" id="addHostModal" role="dialog" aria-modal="true">
   <div class="modal modal-wide">
     <h2>เพิ่มเครื่องใหม่ (Agent)</h2>
-    <p class="install-note">กำหนดค่า agent สำหรับเครื่องใหม่ แล้วคัดลอกคำสั่งไปรันบนเครื่องนั้น (ไม่ต้องมี Python — ไฟล์ config/data อยู่ข้าง exe)</p>
     <div class="wizard-grid">
       <div class="field">
         <label for="addHostId">host_id</label>
@@ -105,6 +104,51 @@
       <button class="btn primary" id="addBuildCmd">สร้าง token + พิมพ์คำสั่ง</button>
       <button class="btn" id="copyAddCmd">คัดลอกคำสั่ง</button>
       <button class="btn" id="addHostClose">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editHostModal" role="dialog" aria-modal="true">
+  <div class="modal modal-wide">
+    <h2>แก้ไขค่า Host: <span id="editHostTitle">—</span></h2>
+    <p class="install-note">ค่า watch / ports / interval ถูกบังคับฝั่ง agent (เครื่องที่ถูก monitor) — บันทึกที่นี่แล้ว agent จะ pull ค่าใหม่ในรอบถัดไป (ไม่ต้อง restart)</p>
+    <div class="wizard-grid">
+      <div class="field">
+        <label for="editHostname">ชื่อ (แสดงใน UI)</label>
+        <input id="editHostname" placeholder="เช่น web-01">
+        <small class="field-hint">เปลี่ยนชื่อที่แสดงบนการ์ด Fleet (ไม่เปลี่ยน host_id)</small>
+      </div>
+      <div class="field">
+        <label for="editTags">tags</label>
+        <input id="editTags" placeholder="เช่น env=prod,location=th (คั่น ,)">
+        <small class="field-hint">ป้ายกำกับสำหรับกรอง Fleet, คั่นด้วย ,</small>
+      </div>
+      <div class="field">
+        <label for="editInterval">interval (วินาที)</label>
+        <input id="editInterval" type="number" min="1">
+        <small class="field-hint">รอบเก็บ+push — agent จะนำไปใช้รอบหน้า (ถ้าปล่อยว่าง = คงเดิม)</small>
+      </div>
+      <div class="field">
+        <label for="editWatch">watch (service/process)</label>
+        <input id="editWatch" placeholder="เช่น nginx,mysql">
+        <small class="field-hint">service ที่เฝ้า up/down — agent อัปเดต (คั่น ,)</small>
+      </div>
+      <div class="field">
+        <label for="editPorts">ports (TCP ที่เฝ้า)</label>
+        <input id="editPorts" placeholder="เช่น 80:web,443:https">
+        <small class="field-hint">TCP port เปิด/ปิด — agent อัปเดต (คั่น ,)</small>
+      </div>
+      <div class="field">
+        <label for="editMaxBatch">max-batch</label>
+        <input id="editMaxBatch" type="number" min="1">
+        <small class="field-hint">snapshot สูงสุดต่อ request</small>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn danger" id="editHostDelete">ลบ host</button>
+      <span style="flex:1"></span>
+      <button class="btn primary" id="editHostSave">บันทึก</button>
+      <button class="btn" id="editHostClose">ปิด</button>
     </div>
   </div>
 </div>

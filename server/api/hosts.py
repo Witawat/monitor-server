@@ -72,3 +72,51 @@ async def set_tags(
     if not await db.set_host_tags(host_id, tags):
         return JSONResponse({"detail": "ไม่พบ host"}, status_code=404)
     return JSONResponse({"ok": True, "host_id": host_id, "tags": tags})
+
+
+@router.get("/{host_id}/config")
+async def get_host_config(request: Request, host_id: str) -> JSONResponse:
+    """คืน remote config ที่ตั้งผ่าน UI (agent จะ pull ไปใช้)."""
+
+    db: Database = request.app.state.db
+    if await db.get_host(host_id) is None:
+        return JSONResponse({"detail": "ไม่พบ host"}, status_code=404)
+    return JSONResponse(await db.get_desired_config(host_id))
+
+
+@router.put("/{host_id}/config")
+async def set_host_config(
+    request: Request, host_id: str, body: Annotated[dict[str, Any], Body()]
+) -> JSONResponse:
+    """ตั้ง remote config ต่อ host (interval/watch/ports/max_batch) — agent ไป apply เอง.
+
+    Notes:
+        ค่าที่รับ: interval (int), watch (str), ports (str), max_batch (int).
+        แก้ชื่อ hostname ด้วย (ระบุ field hostname ได้).
+    """
+
+    db: Database = request.app.state.db
+    if await db.get_host(host_id) is None:
+        return JSONResponse({"detail": "ไม่พบ host"}, status_code=404)
+    # กันรับข้อมูลขยะ: เก็บเฉพาะ field ที่รองรับ
+    allowed = {"interval", "watch", "ports", "max_batch", "hostname"}
+    config = {k: body[k] for k in allowed if k in body}
+    if "interval" in config:
+        try:
+            config["interval"] = int(config["interval"])
+            if config["interval"] < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            return JSONResponse({"detail": "interval ต้องเป็น int >= 1"}, status_code=400)
+    if "max_batch" in config:
+        try:
+            config["max_batch"] = int(config["max_batch"])
+            if config["max_batch"] < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            return JSONResponse({"detail": "max_batch ต้องเป็น int >= 1"}, status_code=400)
+    if "hostname" in config:
+        await db.set_host_name(host_id, str(config["hostname"]))
+        config.pop("hostname", None)
+    await db.set_desired_config(host_id, config)
+    return JSONResponse({"ok": True, "host_id": host_id, "config": config})

@@ -185,13 +185,17 @@ class Database:
         await self._conn.commit()
 
     async def _migrate(self) -> None:
-        """ย้าย schema เก่า: เพิ่มคอลัมน์ tags ถ้า DB เดิมยังไม่มี."""
+        """ย้าย schema เก่า: เพิ่มคอลัมน์ tags / desired_config ถ้า DB เดิมยังไม่มี."""
 
         cur = await self._require().execute("PRAGMA table_info(hosts)")
         cols = {row["name"] for row in await cur.fetchall()}
         if "tags" not in cols:
             await self._require().execute(
                 "ALTER TABLE hosts ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "desired_config" not in cols:
+            await self._require().execute(
+                "ALTER TABLE hosts ADD COLUMN desired_config TEXT NOT NULL DEFAULT '{}'"
             )
 
     async def close(self) -> None:
@@ -227,6 +231,45 @@ class Database:
             "SELECT 1 FROM hosts WHERE host_id = ?", (host_id,)
         )
         return await cur.fetchone() is not None
+
+    async def get_desired_config(self, host_id: str) -> dict[str, Any]:
+        """คืน remote config ที่ตั้งผ่าน UI ต่อ host (ว่าง = ยังไม่ตั้ง)."""
+
+        cur = await self._require().execute(
+            "SELECT desired_config FROM hosts WHERE host_id = ?", (host_id,)
+        )
+        row = await cur.fetchone()
+        if row is None or not row["desired_config"]:
+            return {}
+        try:
+            data = json.loads(row["desired_config"])
+            return cast(dict[str, Any], data)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    async def set_desired_config(self, host_id: str, config: dict[str, Any]) -> None:
+        """บันทึก remote config ต่อ host (upsert desired_config)."""
+
+        await self._require().execute(
+            "UPDATE hosts SET desired_config = ? WHERE host_id = ?",
+            (json.dumps(config), host_id),
+        )
+        await self._require().commit()
+
+    async def get_desired_config_by_token(self, token: str) -> dict[str, Any]:
+        """อ่าน remote config ตาม token (agent ใช้ pull ทั้งคอนฟิกตอน push)."""
+
+        cur = await self._require().execute(
+            "SELECT desired_config FROM hosts WHERE token = ?", (token,)
+        )
+        row = await cur.fetchone()
+        if row is None or not row["desired_config"]:
+            return {}
+        try:
+            data = json.loads(row["desired_config"])
+            return cast(dict[str, Any], data)
+        except (json.JSONDecodeError, TypeError):
+            return {}
 
     async def host_has_data(self, host_id: str) -> bool:
         """เช็คว่า host เคยส่ง snapshot (metrics) เข้ามาแล้วหรือยัง."""
@@ -411,7 +454,7 @@ class Database:
         cutoff = int(time.time()) - timeout_sec
         conn = self._require()
         rows = await conn.execute_fetchall(
-            "SELECT host_id, hostname, platform, tags, first_seen, last_seen FROM hosts ORDER BY hostname"
+            "SELECT host_id, hostname, platform, tags, desired_config, first_seen, last_seen FROM hosts ORDER BY hostname"
         )
         result: list[dict[str, Any]] = []
         for r in rows:
@@ -421,6 +464,7 @@ class Database:
                 continue
             h["online"] = online
             h["tags"] = json.loads(h["tags"] or "[]")
+            h["desired_config"] = json.loads(h["desired_config"] or "{}")
             h["summary"] = await self._latest_summary(h["host_id"])
             result.append(h)
         return result
@@ -429,7 +473,7 @@ class Database:
         """คืน detail host เดียว + snapshot ล่าสุด (None ถ้าไม่พบ)."""
 
         cur = await self._require().execute(
-            "SELECT host_id, hostname, platform, tags, first_seen, last_seen FROM hosts WHERE host_id = ?",
+            "SELECT host_id, hostname, platform, tags, desired_config, first_seen, last_seen FROM hosts WHERE host_id = ?",
             (host_id,),
         )
         row = await cur.fetchone()
@@ -438,6 +482,7 @@ class Database:
         h = dict(row)
         h["online"] = h["last_seen"] >= (int(time.time()) - timeout_sec)
         h["tags"] = json.loads(h["tags"] or "[]")
+        h["desired_config"] = json.loads(h["desired_config"] or "{}")
         h["summary"] = await self._latest_summary(host_id)
         h["services"] = await self.latest_services(host_id)
         h["ports"] = await self.latest_ports(host_id)
@@ -449,6 +494,16 @@ class Database:
         cur = await self._require().execute(
             "UPDATE hosts SET tags = ? WHERE host_id = ?",
             (json.dumps(tags), host_id),
+        )
+        await self._require().commit()
+        return cur.rowcount > 0
+
+    async def set_host_name(self, host_id: str, hostname: str) -> bool:
+        """แก้ชื่อ hostname ที่แสดงใน UI; คืน True ถ้า host มีอยู่."""
+
+        cur = await self._require().execute(
+            "UPDATE hosts SET hostname = ? WHERE host_id = ?",
+            (hostname, host_id),
         )
         await self._require().commit()
         return cur.rowcount > 0

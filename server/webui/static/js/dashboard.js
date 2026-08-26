@@ -1,6 +1,6 @@
 // dashboard.js — fleet cards + host KPI + Chart.js (WEBUI_DESIGN.md §5-7)
 (function () {
-  const { api, toast } = window.Monitor;
+  const { api, toast, confirmModal } = window.Monitor;
   // 7.6: จำ range ที่ผู้ใช้เลือกไว้ใน localStorage
   const savedRange = localStorage.getItem('monitor.range');
   let currentRange = ['1h','6h','1d','7d','30d','45d'].includes(savedRange) ? savedRange : '1h';
@@ -365,6 +365,8 @@
       renderChart(metrics.series);
       currentHost = id;
       startHostRefresh(id);   // realtime: poll ทุก 5s (range เล็ก) / 1 นาที (range กว้าง)
+      const editBtn = document.getElementById('editHostBtn');
+      if (editBtn) editBtn.onclick = () => openEditHostModal(id);   // แก้ไขค่า host (tags + remote config + ลบ)
     } catch (e) { toast('error', e.message); }
   }
 
@@ -504,5 +506,58 @@
     if (btn) btn.onclick = () => openAddHostModal();
   }
 
-  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect, renderFleetStats, openAddHostModal };
+  // ── แก้ไขค่า host — tags + remote config + ลบ ──
+  async function openEditHostModal(id) {
+    const modal = document.getElementById('editHostModal');
+    if (!modal) return;
+    let host;
+    try { host = await api('/api/v1/hosts/' + id); } catch (e) { toast('error', e.message); return; }
+    document.getElementById('editHostTitle').textContent = host.hostname || host.host_id;
+    document.getElementById('editHostname').value = host.hostname || '';
+    document.getElementById('editTags').value = (host.tags || []).join(', ');
+    const dc = host.desired_config || {};
+    document.getElementById('editInterval').value = dc.interval || '';
+    document.getElementById('editWatch').value = dc.watch || '';
+    document.getElementById('editPorts').value = dc.ports || '';
+    document.getElementById('editMaxBatch').value = dc.max_batch || '';
+    modal.classList.add('show');
+
+    document.getElementById('editHostSave').onclick = async () => {
+      const tags = document.getElementById('editTags').value.split(',').map((t) => t.trim()).filter(Boolean);
+      const hostname = document.getElementById('editHostname').value.trim();
+      const interval = parseInt(document.getElementById('editInterval').value, 10);
+      const watch = document.getElementById('editWatch').value.trim();
+      const ports = document.getElementById('editPorts').value.trim();
+      const maxBatch = parseInt(document.getElementById('editMaxBatch').value, 10);
+      const remote = {};
+      if (hostname) remote.hostname = hostname;
+      if (Number.isInteger(interval) && interval > 0) remote.interval = interval;
+      if (watch) remote.watch = watch;
+      if (ports) remote.ports = ports;
+      if (Number.isInteger(maxBatch) && maxBatch > 0) remote.max_batch = maxBatch;
+      try {
+        await api('/api/v1/hosts/' + id + '/tags', { method: 'PUT', body: JSON.stringify({ tags }) });
+        if (Object.keys(remote).length) {
+          await api('/api/v1/hosts/' + id + '/config', { method: 'PUT', body: JSON.stringify(remote) });
+        }
+        toast('success', 'บันทึกแล้ว — agent จะ pull ค่าใหม่รอบถัดไป');
+        modal.classList.remove('show');
+        renderHostView(id);
+        window.Monitor.loadFleet(true);
+      } catch (e) { toast('error', e.message); }
+    };
+    document.getElementById('editHostDelete').onclick = async () => {
+      if (!(await confirmModal('ลบ host ' + (host.hostname || host.host_id) + ' และข้อมูลทั้งหมด?'))) return;
+      try {
+        await api('/api/v1/hosts/' + id, { method: 'DELETE' });
+        toast('success', 'ลบ host แล้ว');
+        modal.classList.remove('show');
+        await window.Monitor.loadFleet(true);
+      } catch (e) { toast('error', e.message); }
+    };
+    document.getElementById('editHostClose').onclick = () => modal.classList.remove('show');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+  }
+
+  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect, renderFleetStats, openAddHostModal, openEditHostModal };
 })();

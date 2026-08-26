@@ -25,7 +25,10 @@ async def ingest(request: Request, body: list[dict[str, Any]]) -> JSONResponse:
     token = request.headers.get(HEADER_TOKEN, "")
     ip = client_ip(request)
     try:
-        received, host_id = await service.process_batch(token, ip, body)
+        received, host_id, remote_cfg = await service.process_batch(token, ip, body)
     except IngestError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=exc.status_code)
-    return JSONResponse({"status": "ok", "received": received, "host_id": host_id})
+    return JSONResponse({
+        "status": "ok", "received": received, "host_id": host_id,
+        "config": remote_cfg,   # คืน remote config ให้ agent pull/apply (ถ้ามี)
+    })

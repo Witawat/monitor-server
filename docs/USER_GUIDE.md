@@ -208,6 +208,7 @@ dist\monitor-agent.exe --install --server http://... --token <TOKEN> --interval 
 ### 5.2 Host (รายละเอียดรายเครื่อง)
 
 - เลือก host จาก **dropdown** (หรือคลิกการ์ดใน Fleet)
+- **แก้ไขค่า Host** (ปุ่ม "แก้ไข" ใน toolbar): modal แก้ชื่อ (hostname) + tags + ค่า agent ระยะไกล (interval/watch/ports/max_batch) — agent จะ pull ค่าใหม่ในรอบถัดไป (ไม่ต้อง restart) + ปุ่มลบ host (confirm)
 - **Realtime อัตโนมัติ**: KPI / services / ports / กราฟ **อัปเดตเองทุก ~5 วิ** (range 1h/6h) หรือ 1 นาที (range กว้าง) — ไม่ต้องรีเฟรชมือ (Fleet card poll ทุก 10 วิ)
 - **KPI**: CPU / RAM / Disk / Uptime (สีเปลี่ยนตาม threshold: ≥80 เหลือง, ≥90 แดง)
 - **Alert ล่าสุด**: แจ้ง alert ที่เพิ่งเกิดของ host นี้

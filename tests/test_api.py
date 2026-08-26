@@ -137,3 +137,28 @@ def test_status_host_count(tmp_path):
     with _client(tmp_path) as c:
         c.post("/api/v1/ingest", json=_batch(), headers={HEADER_TOKEN: "tok"})
         assert c.get("/api/status").json()["host_count"] == 1
+
+
+def test_remote_config_roundtrip(tmp_path):
+    """ตั้ง remote config ต่อ host แล้วอ่านกลับ + ingest คืน config ให้ agent."""
+
+    with _client(tmp_path) as c:
+        c.post("/api/v1/ingest", json=_batch(), headers={HEADER_TOKEN: "tok"})
+
+        # ตั้ง config ผ่าน admin
+        r = c.put("/api/v1/hosts/h1/config", json={"interval": 10, "watch": "nginx,mysql", "ports": "80:web", "max_batch": 50})
+        assert r.status_code == 200
+
+        # อ่านกลับ
+        got = c.get("/api/v1/hosts/h1/config").json()
+        assert got["interval"] == 10
+        assert got["watch"] == "nginx,mysql"
+        assert got["ports"] == "80:web"
+
+        # agent push (token "tok") → response คืน config ให้ pull/apply
+        push = c.post("/api/v1/ingest", json=_batch(), headers={HEADER_TOKEN: "tok"})
+        assert push.json()["config"]["interval"] == 10
+
+        # เปลี่ยน hostname ผ่าน config ด้วย
+        assert c.put("/api/v1/hosts/h1/config", json={"hostname": "web-prod"}).status_code == 200
+        assert c.get("/api/v1/hosts/h1").json()["hostname"] == "web-prod"

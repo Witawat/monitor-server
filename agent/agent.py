@@ -37,7 +37,8 @@ def _flush_queue(queue: PushQueue, url: str, token: str, batch_size: int) -> Non
     ok = True
     for i in range(0, len(pending), batch_size):
         chunk = pending[i : i + batch_size]
-        if not (200 <= push_batch_status(url, token, chunk) < 300):
+        status, _ = push_batch_status(url, token, chunk)
+        if not (200 <= status < 300):
             ok = False
             break
     if ok:
@@ -57,15 +58,46 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
     backoff = Backoff()
     fail_streak = 0
 
+    # ค่าที่แก้ได้จาก remote (server ตั้งผ่าน WebUI) — เก็บเป็น mutable ตัวแปร, ไม่ใช่ config (frozen)
+    interval = config.interval
+    watch = config.watch
+    ports = config.ports
+    max_batch = config.max_batch
+
+    def apply_remote(remote: dict[str, Any]) -> None:
+        """อัปเดตค่า config จาก remote ที่ server ตั้ง (ไม่ restart)."""
+
+        nonlocal interval, watch, ports, max_batch
+        if "interval" in remote:
+            try:
+                v = int(remote["interval"])
+                if v >= 1:
+                    interval = v
+            except (ValueError, TypeError):
+                pass
+        if "watch" in remote:
+            watch = tuple(n.strip() for n in str(remote["watch"]).split(",") if n.strip())
+        if "ports" in remote:
+            import agent.config as _cfg
+
+            ports = _cfg._parse_ports(str(remote["ports"]))
+        if "max_batch" in remote:
+            try:
+                v = int(remote["max_batch"])
+                if v >= 1:
+                    max_batch = v
+            except (ValueError, TypeError):
+                pass
+
     while True:
         try:
-            snap = collect.snapshot(host_id, watch=config.watch, ports=list(config.ports))
+            snap = collect.snapshot(host_id, watch=watch, ports=list(ports))
             batch: list[dict[str, Any]] = [snapshot_to_dict(snap)]
-            status = push_batch_status(config.server_url, config.token, batch)
+            status, remote = push_batch_status(config.server_url, config.token, batch)
         except Exception as exc:  # noqa: BLE001 - ไม่ให้ loop ตายเพราะ provider/network พลาดชั่วคราว
             # collect/push ยกเว้น (อ่าน /proc พลาด, psutil พลาด, json พัง) → ข้ามรอบนี้ + backoff
             print(f"[agent] collect/push พลาด: {exc!r}"
-                  f" — retry ใน {config.interval}s")
+                  f" — retry ใน {interval}s")
             fail_streak += 1
             time.sleep(backoff.delay(fail_streak))
             continue
@@ -75,8 +107,9 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
             raise SystemExit(f"server ตอบ {status} — token ไม่ถูกต้อง ตรวจ config แล้วลองใหม่")
         if 200 <= status < 300:
             fail_streak = 0
-            _flush_queue(queue, config.server_url, config.token, config.max_batch)
-            delay: float = config.interval
+            apply_remote(remote)   # ใช้ค่าล่าสุดที่ server ตั้ง (ถ้ามี)
+            _flush_queue(queue, config.server_url, config.token, max_batch)
+            delay: float = interval
         elif status == 0 or status >= 500 or status == 429:
             # offline / server พลาดชั่วคราว (5xx) / rate-limited → เก็บ queue + backoff
             queue.enqueue(batch)

@@ -80,8 +80,8 @@ class IngestService:
         self._alert_engine = alert_engine
         self._limiter = RateLimiter()
 
-    async def process_batch(self, token: str, client_ip: str, raw: list[dict[str, Any]]) -> tuple[int, str]:
-        """ประมวลผล batch หนึ่ง; คืน (received, host_id).
+    async def process_batch(self, token: str, client_ip: str, raw: list[dict[str, Any]]) -> tuple[int, str, dict[str, Any]]:
+        """ประมวลผล batch หนึ่ง; คืน (received, host_id, remote_config).
 
         Raises:
             RateLimited: ถ้ายิงเกิน rate limit.
@@ -134,7 +134,8 @@ class IngestService:
         await self._db.upsert_host(host_id, hostname, platform, token)
         if self._alert_engine is not None:
             await self._alert_engine.evaluate(snaps)
-        return len(snaps), host_id
+        remote_cfg = await self._db.get_desired_config_by_token(token)
+        return len(snaps), host_id, remote_cfg
 
     @staticmethod
     def _auto_host_id(raw: list[dict[str, Any]]) -> str:
