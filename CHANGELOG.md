@@ -12,6 +12,7 @@
 - Fleet: OS icon (linux/windows/mac จาก `platform`) + แถบสถิติ (จำนวน/ออนไลน์/ออฟไลน์/Linux/Windows) เมื่อมีหลาย server
 - กราฟย้อนหลังสูงสุด 45 วัน: `retention_raw_days` default 45 + range 30d/45d ใน API/chart/export
 - **Host realtime auto-refresh**: section Host poll `/api/v1/hosts/{id}` + `/metrics` ทุก 5s (range 1h/6h) หรือ 1 นาที (range กว้าง) — KPI/services/ports/chart อัปเดตเอง (Fleet card poll 10s อยู่แล้ว)
+- **วิซาร์ด "+ เพิ่มเครื่องใหม่"**: ปุ่มใน Fleet toolbar → modal ระบุค่า agent (host_id/interval/watch/ports/max-batch พร้อมคำอธิบาย) → สร้าง token + พิมพ์คำสั่ง `--install` ให้คัดลอก (ไม่พึ่งไฟล์ .md); empty state มี "ดูวิธีติดตั้ง agent" (modal) เปิด `/docs/*.md` ที่ 404 → แสดงข้อมูลจากเว็บแทน
 - **CI + Release automation**: `.github/workflows/ci.yml` (ruff+mypy+pytest บน py3.11/3.12) + `release.yml` (push tag `v*` → build exe + publish release ต่อไฟล์)
 - **README badges** (CI/Release/Python/version/license) + `--no-browser` เปิด WebUI อัตโนมัติแบบไม่บังคับ
 

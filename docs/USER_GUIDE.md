@@ -202,6 +202,7 @@ dist\monitor-agent.exe --install --server http://... --token <TOKEN> --interval 
 - **การ์ด host**: ชื่อ + OS icon + badge ออนไลน์/ออฟไลน์ + CPU/RAM/Disk + net + uptime + **sparkline** (แนวโน้ม) + เตือน service หยุด
 - **สถิติด้านบน**: จำนวนเครื่อง / ออนไลน์ / ออฟไลน์ / Linux / Windows
 - **กรอง**: ปุ่ม ทั้งหมด / ออนไลน์ / ออฟไลน์ + ค้นหา (ช่องบน) + tag filter (`#prod` ฯลฯ)
+- **+ เพิ่มเครื่องใหม่**: เปิดวิซาร์ดระบุค่า agent สำหรับเครื่องใหม่ (host_id / interval / watch / ports / max-batch — มีคำอธิบายใต้ฟิลด์) → สร้าง token + พิมพ์คำสั่งให้คัดลอกไปรันบนเครื่องนั้น (ดู §5.5)
 - **คลิกการ์ด** → ไปที่รายละเอียดของ host นั้น (section Host)
 
 ### 5.2 Host (รายละเอียดรายเครื่อง)
@@ -242,6 +243,26 @@ dist\monitor-agent.exe --install --server http://... --token <TOKEN> --interval 
 - **Agent Token**: 
   - gen token: ใส่ `host_id` ที่ต้องการ → "สร้าง token" → คัดลอก (แสดงครั้งเดียว)
   - revoke: ปลด token (ต้องยืนยัน)
+
+### 5.5 เพิ่มเครื่องใหม่ (วิซาร์ด)
+
+ปุ่ม **"+ เพิ่มเครื่องใหม่"** ใน toolbar Fleet — ตั้งค่า agent สำหรับเครื่องใหม่ แล้วคัดลอกคำสั่งไปรันบนเครื่องนั้น (ไม่ต้องมี Python; ไฟล์ config/data อยู่ข้าง exe):
+
+| ฟิลด์ | คำอธิบาย / ใช้งานแบบไหน |
+|-------|------------------------|
+| `host_id` | ชื่อระบุเครื่องนี้ใน WebUI (ตัวตนของ host, token ผูกกับ id นี้) |
+| `interval` (วินาที) | รอบที่ agent เก็บ + push metric — ถี่ = กราฟละเอียดขึ้น แต่โหลด server มากขึ้น (เช่น 15 = ทุก 15 วิ) |
+| `watch` | service/process ที่เฝ้าว่า up/down — แสดง badge ในหน้า Host, คั่นด้วย `,` (ปล่อยว่างได้) |
+| `ports` | TCP port ที่เฝ้าเปิด/ปิด — รูป `port:ชื่อ` (เช่น 80:web) แสดงตาราง Ports ในหน้า Host (ปล่อยว่างได้) |
+| `max-batch` | จำนวน snapshot สูงสุดต่อ request — ตรงกับ server `ingest.max_batch_size` (100 มาตรฐาน) |
+
+ขั้นตอน:
+1. กรอกฟิลด์ตามต้องการ (มีคำอธิบายใต้ช่อง)
+2. กด **"สร้าง token + พิมพ์คำสั่ง"** → สร้าง token อัตโนมัติจาก `host_id` + อัปเดตคำสั่ง
+3. กด **"คัดลอกคำสั่ง"** → นำไปรันบนเครื่องเป้าหมาย (Windows: `monitor-agent.exe` · Linux: `./monitor-agent`)
+4. รอสักครู่ → host ขึ้นใน Fleet (push แรกเข้ามา)
+
+> 💡 ทางลัด: ถ้ายังไม่มี host กดปุ่ม **"ดูวิธีติดตั้ง agent"** ใน empty state (แสดง modal ที่ให้สร้าง token + คัดลอกคำสั่งได้เหมือนกัน)
 
 ---
 

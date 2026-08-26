@@ -167,6 +167,8 @@ setScale();
 └───────────────────────────────────────────────────┘
 ```
 - **Fleet ด้านบนมีสถิติ**: `N เครื่อง · X ออนไลน์ · Y ออฟไลน์ · L Linux · W Windows` (`#fleetStats`)
+- **toolbar**: filter tab (ทั้งหมด/ออนไลน์/ออฟไลน์) + tag filter + ปุ่ม **"+ เพิ่มเครื่องใหม่"** + รีเฟรช
+- **+ เพิ่มเครื่องใหม่** → modal วิซาร์ด (ตั้งค่า agent: host_id/interval/watch/ports/max-batch พร้อม hint อธิบายใต้ฟิลด์) → สร้าง token (POST `/api/v1/auth/tokens`) + พิมพ์คำสั่ง `--install` → คัดลอก; ก็มี "ดูวิธีติดตั้ง agent" ใน empty state (modal แบบย่อ)
 - **HostCard**: OS icon (ได้จาก `platform` → linux/windows/mac) + ชื่อ + badge (🟢 ออนไลน์ / ○ ออฟไลน์) + progress bar CPU/RAM/Disk + Net + uptime
 - ออฟไลน์: การ์ด dim (opacity .6) + badge แดง, ไม่มีค่า net (`—`)
 - filter: tab ทั้งหมด/ออนไลน์/ออฟไลน์ + ค้นหาจาก topbar + tag filter
