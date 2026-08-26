@@ -98,10 +98,11 @@ ruff check .; mypy server agent shared; pytest -q
 
 ## เอกสาร
 
+- **`docs/USER_GUIDE.md`** — คู่มือการใช้งาน (Quick Start → WebUI → Alerts → Service → Troubleshoot) ← เริ่มที่นี่
 - `AGENTS.md` — กฎ + stack + คำสั่งหลัก
 - `PRODUCT.md` — product context (Users/Purpose/Principles)
 - `KNOWLEDGE_BASE.md` — ความรู้ก่อนเขียนโค้ด
-- `docs/ARCHITECTURE.md` / `CONFIG.md` / `API.md` / `CODING_GUIDE.md` / `PLAN.md` / `BUILD.md` / `DEPLOYMENT.md` / `DEVELOPMENT.md` / `WEBUI_DESIGN.md`
+- `docs/ARCHITECTURE.md` / `CONFIG.md` / `API.md` / `CODING_GUIDE.md` / `PLAN.md` / `BUILD.md` / `DEPLOYMENT.md` / `DEVELOPMENT.md` / `WEBUI_DESIGN.md` / `WEBUI_IMPROVEMENT_PLAN.md`
 
 ## License
 
