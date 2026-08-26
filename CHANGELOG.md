@@ -7,6 +7,7 @@
 ## [Unreleased]
 
 ### เพิ่ม
+- **Metric เพิ่ม (Chunk B)**: agent เก็บ + server แสดง disk I/O rate, top process, host info (OS/version/arch/kernel), cpu cores, NIC status (up/down/ip/mac), process detail (per watch) — KPI แถว host info; ตาราง Process ที่ใช้ทรัพยากรสูง + Network Interfaces (psutil ให้ครบ; stdlib ได้ host_info/cpu_cores/disk_io) [`shared/metric`, `agent/collect`, `server/storage`]
 - **เปลี่ยนรหัสผ่าน** (หน้า ตั้งค่า): ตรวจรหัสเก่า → ตั้งใหม่ (≥ 8 ตัว) → เก็บ hash ใน DB (`state_kv` เหนือกว่า config.toml) — ใช้ได้ทันที ไม่ restart
 - **Auto-fill หน้า login ครั้งแรก**: exe สร้าง user/pass อัตโนมัติ → หน้า login กรอกช่องให้เลย + hint; หายไปหลัง login สำเร็จ
 - **กัน brute-force login**: rate limit เก็บใน DB (persist ข้าม restart) — ต่อ IP (`login_rate_per_min`, default 5/นาที) + รวมทุก IP (`login_global_per_min`, default 30/นาที กัน botnet) + ตั้งค่าได้ใน config.toml `[auth]` — เกิน = `429`

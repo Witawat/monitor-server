@@ -183,6 +183,44 @@
     ).join('');
   }
 
+  // ฟังก์ชันช่วย render ตาราง (แสดง/ซ่อน section ตามว่ามีข้อมูล)
+  function renderTable(sectionId, bodyId, rows, map) {
+    const section = document.getElementById(sectionId);
+    const body = document.getElementById(bodyId);
+    if (!body) return;
+    if (!rows || !rows.length) { if (section) section.style.display = 'none'; body.innerHTML = ''; return; }
+    if (section) section.style.display = 'block';
+    body.innerHTML = rows.map((r) => '<tr>' + map(r).map((c) => '<td>' + c + '</td>').join('') + '</tr>').join('');
+  }
+
+  // ข้อมูลเพิ่ม (Chunk B): host info + cpu cores + disk I/O + top process + NIC
+  function renderExtras(summary) {
+    const s = summary || {};
+    const infoRow = document.getElementById('hostInfoRow');
+    if (infoRow) {
+      const parts = [];
+      const info = s.host_info || {};
+      const os = (info.os_name || '').trim();
+      if (os) parts.push(os + (info.os_version ? ' ' + info.os_version : '') + (info.arch ? ' · ' + info.arch : ''));
+      if (info.kernel) parts.push('kernel ' + info.kernel);
+      if (s.cpu_cores) parts.push(s.cpu_cores + ' cores');
+      const dio = s.disk_io_rate || {};
+      if (dio.read_bps || dio.write_bps) parts.push('disk ⇄ ' + formatRate(dio.read_bps) + ' / ' + formatRate(dio.write_bps));
+      infoRow.innerHTML = parts.map((p) =>
+        '<span class="badge" style="background:var(--surface);border:1px solid var(--border)">' + escapeHtml(p) + '</span>'
+      ).join('');
+    }
+    renderTable('topProcSection', 'topProcBody', s.top_process || [], (r) => [
+      escapeHtml(r.pid), escapeHtml(r.name), formatPercent(r.cpu_percent), formatPercent(r.mem_percent),
+    ]);
+    renderTable('nicSection', 'nicBody', s.nic_status || [], (r) => [
+      escapeHtml(r.iface),
+      (r.up ? '<span class="badge online">● ขึ้น</span>' : '<span class="badge offline">○ ลง</span>'),
+      escapeHtml(r.ip || '—'),
+      escapeHtml(r.mac || '—'),
+    ]);
+  }
+
   // alert ที่เพิ่งเกิดขึ้นของ host นี้ (บริบทปัญหา) — ใช้ /api/v1/alerts/history?host_id=<id>
   async function renderHostAlertHistory(hostId) {
     const el = document.getElementById('hostAlerts');
@@ -320,6 +358,7 @@
         renderKpi(host.summary);
         renderServices(host.services);
         renderPorts(host.ports);
+        renderExtras(host.summary);
         renderHostAlertHistory(id);
         renderChart(metrics.series);
       } catch (e) { /* เงียบ — poll ถัดไปจะลองใหม่ */ }
@@ -360,6 +399,7 @@
       renderKpi(host.summary);
       renderServices(host.services);
       renderPorts(host.ports);
+      renderExtras(host.summary);
       renderHostAlertHistory(id);
       renderMetricChips();
       renderChart(metrics.series);

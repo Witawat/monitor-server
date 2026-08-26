@@ -79,6 +79,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - [x] Agent push: batch + retry + backoff + queue เมื่อ offline (เก็บในเครื่องแล้วส่งทีหลัง)
 - [x] Agent เฝ้า TCP port (เปิด/ปิด ตาม config `--ports` / env `MONITOR_PORTS` เช่น `80:web,443:https`) — server เก็บ `port_samples` + host-view แสดงตาราง
 - [x] Remote config: ปุ่ม "แก้ไขค่า Host" ตั้ง interval/watch/ports/max_batch/hostname → server เก็บ `desired_config` + คืนใน ingest response → agent apply โดยไม่ restart
+- [x] Metric เพิ่ม (disk I/O rate, top process, host info, cpu cores, NIC status, process detail) — แสดงในหน้า Host (แถบ info + ตาราง); psutil ให้ครบ, stdlib ได้ host_info/cpu_cores/disk_io
 - [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram) + host-down
 - [x] ตั้งค่า Webhook/Telegram ผ่าน WebUI (หน้า ตั้งค่า → การแจ้งเตือน): ปุ่มทดสอบ + toggle + badge สถานะ + wizard ครั้งแรก — เก็บใน DB (`state_kv["notifiers"]`), มีผลทันทีไม่ restart, config.toml เป็น fallback
 - [x] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token

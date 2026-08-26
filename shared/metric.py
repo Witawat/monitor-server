@@ -79,6 +79,55 @@ class PortSample:
 
 
 @dataclass
+class DiskIOSample:
+    """cumulative I/O counter ของหนึ่งอุปกรณ์ดิสก์ (server คำนวณ rate จาก delta)."""
+
+    device: str = ""
+    read_bytes: int = 0
+    write_bytes: int = 0
+
+
+@dataclass
+class TopProcessSample:
+    """หนึ่ง process ที่ใช้ CPU/หน่วยความจำสูง (สำหรับแสดงใน host view)."""
+
+    pid: int = 0
+    name: str = ""
+    cpu_percent: float = 0.0
+    mem_percent: float = 0.0
+
+
+@dataclass
+class NicSample:
+    """สถานะของหนึ่ง network interface (up/down + ip + mac)."""
+
+    iface: str = ""
+    up: bool = False
+    ip: str = ""
+    mac: str = ""
+
+
+@dataclass
+class HostInfo:
+    """ข้อมูลระบบของ host (OS/arch/kernel) — เปลี่ยนนาน ๆ ครั้ง."""
+
+    os_name: str = ""
+    os_version: str = ""
+    arch: str = ""
+    kernel: str = ""
+
+
+@dataclass
+class ProcessDetail:
+    """สถิติ per process ของ service ที่ agent เฝ้าดู (watch)."""
+
+    name: str = ""
+    pid: int = 0
+    cpu_percent: float = 0.0
+    mem_percent: float = 0.0
+
+
+@dataclass
 class Snapshot:
     """หนึ่งจุดข้อมูล metric ของ host ณ เวลา ts (วินาที epoch)."""
 
@@ -96,6 +145,12 @@ class Snapshot:
     ports: list[PortSample] = field(default_factory=list)
     uptime: int = 0
     procs: int = 0
+    disk_io: list[DiskIOSample] = field(default_factory=list)
+    top_process: list[TopProcessSample] = field(default_factory=list)
+    host_info: HostInfo = field(default_factory=HostInfo)
+    cpu_cores: int = 0
+    nic_status: list[NicSample] = field(default_factory=list)
+    process_detail: list[ProcessDetail] = field(default_factory=list)
 
 
 # ── helpers ──
@@ -125,6 +180,7 @@ def snapshot_from_dict(data: dict[str, Any]) -> Snapshot:
     """
     mem = data.get("memory") or {}
     swap = data.get("swap") or {}
+    hi = data.get("host_info") or {}
     return Snapshot(
         host_id=str(data.get("host_id", "")),
         hostname=str(data.get("hostname", "")),
@@ -175,6 +231,48 @@ def snapshot_from_dict(data: dict[str, Any]) -> Snapshot:
         ],
         uptime=_as_int(data.get("uptime")),
         procs=_as_int(data.get("procs")),
+        disk_io=[
+            DiskIOSample(
+                device=str(x.get("device", "")),
+                read_bytes=_as_int(x.get("read_bytes")),
+                write_bytes=_as_int(x.get("write_bytes")),
+            )
+            for x in (data.get("disk_io") or [])
+        ],
+        top_process=[
+            TopProcessSample(
+                pid=_as_int(x.get("pid")),
+                name=str(x.get("name", "")),
+                cpu_percent=_as_float(x.get("cpu_percent")),
+                mem_percent=_as_float(x.get("mem_percent")),
+            )
+            for x in (data.get("top_process") or [])
+        ],
+        host_info=HostInfo(
+            os_name=str(hi.get("os_name", "")),
+            os_version=str(hi.get("os_version", "")),
+            arch=str(hi.get("arch", "")),
+            kernel=str(hi.get("kernel", "")),
+        ),
+        cpu_cores=_as_int(data.get("cpu_cores")),
+        nic_status=[
+            NicSample(
+                iface=str(x.get("iface", "")),
+                up=bool(x.get("up", False)),
+                ip=str(x.get("ip", "")),
+                mac=str(x.get("mac", "")),
+            )
+            for x in (data.get("nic_status") or [])
+        ],
+        process_detail=[
+            ProcessDetail(
+                name=str(x.get("name", "")),
+                pid=_as_int(x.get("pid")),
+                cpu_percent=_as_float(x.get("cpu_percent")),
+                mem_percent=_as_float(x.get("mem_percent")),
+            )
+            for x in (data.get("process_detail") or [])
+        ],
     )
 
 
@@ -202,4 +300,27 @@ def snapshot_to_dict(snap: Snapshot) -> dict[str, Any]:
         "ports": [{"port": p.port, "name": p.name, "up": p.up} for p in snap.ports],
         "uptime": snap.uptime,
         "procs": snap.procs,
+        "disk_io": [
+            {"device": d.device, "read_bytes": d.read_bytes, "write_bytes": d.write_bytes}
+            for d in snap.disk_io
+        ],
+        "top_process": [
+            {"pid": p.pid, "name": p.name, "cpu_percent": p.cpu_percent, "mem_percent": p.mem_percent}
+            for p in snap.top_process
+        ],
+        "host_info": {
+            "os_name": snap.host_info.os_name,
+            "os_version": snap.host_info.os_version,
+            "arch": snap.host_info.arch,
+            "kernel": snap.host_info.kernel,
+        },
+        "cpu_cores": snap.cpu_cores,
+        "nic_status": [
+            {"iface": n.iface, "up": n.up, "ip": n.ip, "mac": n.mac}
+            for n in snap.nic_status
+        ],
+        "process_detail": [
+            {"name": p.name, "pid": p.pid, "cpu_percent": p.cpu_percent, "mem_percent": p.mem_percent}
+            for p in snap.process_detail
+        ],
     }

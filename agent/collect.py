@@ -10,13 +10,18 @@ from pathlib import Path
 from typing import Protocol
 
 from shared.metric import (
+    DiskIOSample,
     DiskSample,
+    HostInfo,
     MemorySample,
     NetSample,
+    NicSample,
     PortSample,
+    ProcessDetail,
     ServiceSample,
     Snapshot,
     SwapSample,
+    TopProcessSample,
 )
 
 try:  # psutil เป็น optional — fallback stdlib ถ้าไม่มี
@@ -96,6 +101,12 @@ class SysInfoProvider(Protocol):
     def procs(self) -> int: ...
     def services(self, names: list[str]) -> list[ServiceSample]: ...
     def ports(self, ports: list[tuple[int, str]]) -> list[PortSample]: ...
+    def disk_io(self) -> list[DiskIOSample]: ...
+    def top_process(self) -> list[TopProcessSample]: ...
+    def host_info(self) -> HostInfo: ...
+    def cpu_cores(self) -> int: ...
+    def nic_status(self) -> list[NicSample]: ...
+    def process_detail(self, watch: list[str]) -> list[ProcessDetail]: ...
 
 
 class _PsutilProvider:
@@ -156,6 +167,79 @@ class _PsutilProvider:
 
     def ports(self, ports: list[tuple[int, str]]) -> list[PortSample]:
         return check_ports(ports)
+
+    def disk_io(self) -> list[DiskIOSample]:
+        counters = psutil.disk_io_counters(perdisk=True) or {}
+        return [
+            DiskIOSample(
+                device=dev,
+                read_bytes=getattr(st, "read_bytes", 0),
+                write_bytes=getattr(st, "write_bytes", 0),
+            )
+            for dev, st in counters.items()
+        ]
+
+    def top_process(self) -> list[TopProcessSample]:
+        rows: list[TopProcessSample] = []
+        for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+            info = p.info
+            rows.append(
+                TopProcessSample(
+                    pid=int(info.get("pid") or 0),
+                    name=str(info.get("name") or ""),
+                    cpu_percent=float(info.get("cpu_percent") or 0.0),
+                    mem_percent=float(info.get("memory_percent") or 0.0),
+                )
+            )
+        rows.sort(key=lambda x: (x.cpu_percent, x.mem_percent), reverse=True)
+        return rows[:5]
+
+    def host_info(self) -> HostInfo:
+        return HostInfo(
+            os_name=platform.system(),
+            os_version=platform.version(),
+            arch=platform.machine(),
+            kernel=platform.release(),
+        )
+
+    def cpu_cores(self) -> int:
+        return psutil.cpu_count(logical=True) or 0
+
+    def nic_status(self) -> list[NicSample]:
+        stats = psutil.net_if_stats() or {}
+        addrs = psutil.net_if_addrs() or {}
+        result: list[NicSample] = []
+        for iface, st in stats.items():
+            ip = ""
+            mac = ""
+            for a in addrs.get(iface, []):
+                family = getattr(a, "family", None)
+                if family == getattr(psutil, "AF_INET", 2) and not ip:
+                    ip = str(a.address)
+                if family == getattr(psutil, "AF_LINK", 17) and not mac:
+                    mac = str(a.address)
+            result.append(NicSample(iface=iface, up=bool(st.isup), ip=ip, mac=mac))
+        return result
+
+    def process_detail(self, watch: list[str]) -> list[ProcessDetail]:
+        wanted = {n.lower() for n in watch}
+        if not wanted:
+            return []
+        result: list[ProcessDetail] = []
+        for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+            info = p.info
+            name = str(info.get("name") or "")
+            if name.lower() not in wanted:
+                continue
+            result.append(
+                ProcessDetail(
+                    name=name,
+                    pid=int(info.get("pid") or 0),
+                    cpu_percent=float(info.get("cpu_percent") or 0.0),
+                    mem_percent=float(info.get("memory_percent") or 0.0),
+                )
+            )
+        return result
 
 
 class _StdlibProvider:
@@ -277,6 +361,46 @@ class _StdlibProvider:
     def ports(self, ports: list[tuple[int, str]]) -> list[PortSample]:
         return check_ports(ports)
 
+    def disk_io(self) -> list[DiskIOSample]:
+        if platform.system() != "Linux":
+            return []
+        result: list[DiskIOSample] = []
+        try:
+            for line in Path("/proc/diskstats").read_text(encoding="utf-8").splitlines():
+                parts = line.split()
+                if len(parts) < 10:
+                    continue
+                try:
+                    read_bytes = int(parts[5]) * 512
+                    write_bytes = int(parts[9]) * 512
+                except (ValueError, IndexError):
+                    continue
+                result.append(DiskIOSample(device=parts[2], read_bytes=read_bytes, write_bytes=write_bytes))
+        except OSError:
+            pass
+        return result
+
+    def top_process(self) -> list[TopProcessSample]:
+        # stdlib ไม่มีทาง enumerate process ทั้งระบบได้ทุกละเอียด — ว่าง
+        return []
+
+    def host_info(self) -> HostInfo:
+        return HostInfo(
+            os_name=platform.system(),
+            os_version=platform.version(),
+            arch=platform.machine(),
+            kernel=platform.release(),
+        )
+
+    def cpu_cores(self) -> int:
+        return os.cpu_count() or 0
+
+    def nic_status(self) -> list[NicSample]:
+        return []
+
+    def process_detail(self, watch: list[str]) -> list[ProcessDetail]:
+        return []
+
 
 def _make_provider() -> SysInfoProvider:
     """เลือก provider ตามว่า import psutil ได้หรือไม่."""
@@ -334,4 +458,10 @@ def snapshot(
         ports=prov.ports(list(ports)),
         uptime=prov.uptime(),
         procs=prov.procs(),
+        disk_io=prov.disk_io(),
+        top_process=prov.top_process(),
+        host_info=prov.host_info(),
+        cpu_cores=prov.cpu_cores(),
+        nic_status=prov.nic_status(),
+        process_detail=prov.process_detail(list(watch)),
     )

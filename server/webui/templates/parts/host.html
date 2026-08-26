@@ -18,12 +18,27 @@
   <div id="hostIdLabel" style="display:none"></div>
   <div class="host-alerts" id="hostAlerts"></div>
   <div class="kpi-row" id="kpiRow"></div>
+  <div id="hostInfoRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
   <div id="servicesRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
   <div class="ports-section" id="portsSection">
     <div class="subhead">Ports ที่เปิด/ปิด</div>
     <table class="ports-table">
       <thead><tr><th>Port</th><th>ชื่อ</th><th>สถานะ</th></tr></thead>
       <tbody id="portsBody"></tbody>
+    </table>
+  </div>
+  <div class="ports-section" id="topProcSection">
+    <div class="subhead">Process ที่ใช้ทรัพยากรสูง</div>
+    <table class="ports-table">
+      <thead><tr><th>PID</th><th>Process</th><th>CPU</th><th>Mem</th></tr></thead>
+      <tbody id="topProcBody"></tbody>
+    </table>
+  </div>
+  <div class="ports-section" id="nicSection">
+    <div class="subhead">Network Interfaces</div>
+    <table class="ports-table">
+      <thead><tr><th>Interface</th><th>สถานะ</th><th>IP</th><th>MAC</th></tr></thead>
+      <tbody id="nicBody"></tbody>
     </table>
   </div>
   <div class="toolbar">

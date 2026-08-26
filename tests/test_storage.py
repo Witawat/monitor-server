@@ -90,6 +90,40 @@ async def test_latest_summary(db):
     assert hosts[0]["summary"]["cpu_percent"] == 55.0
 
 
+async def test_summary_includes_chunk_b(db):
+    """summary คืน field เพิ่ม (Chunk B): cpu_cores/host_info/top_process/nic/process_detail/disk_io_rate."""
+
+    now = int(time.time())
+
+    def snap(ts: int, rd: int, wr: int) -> Snapshot:
+        return snapshot_from_dict(
+            {
+                "host_id": "h1",
+                "hostname": "web-01",
+                "platform": "linux",
+                "ts": ts,
+                "cpu_percent": 10.0,
+                "cpu_cores": 8,
+                "host_info": {"os_name": "Linux", "os_version": "1", "arch": "x86_64", "kernel": "6.1"},
+                "top_process": [{"pid": 1, "name": "init", "cpu_percent": 1.0, "mem_percent": 2.0}],
+                "nic_status": [{"iface": "eth0", "up": True, "ip": "10.0.0.1", "mac": "aa:bb"}],
+                "process_detail": [{"name": "nginx", "pid": 10, "cpu_percent": 1.0, "mem_percent": 2.0}],
+                "disk_io": [{"device": "sda", "read_bytes": rd, "write_bytes": wr}],
+            }
+        )
+
+    await db.upsert_host("h1", "web-01", "linux", "tok", now=now)
+    await db.insert_batch([snap(now - 10, 1000, 500), snap(now, 2000, 1000)])
+    s = await db._latest_summary("h1")
+    assert s["cpu_cores"] == 8
+    assert s["host_info"]["os_name"] == "Linux"
+    assert s["top_process"][0]["name"] == "init"
+    assert s["nic_status"][0]["iface"] == "eth0"
+    assert s["process_detail"][0]["name"] == "nginx"
+    assert s["disk_io_rate"]["read_bps"] > 0
+    assert s["disk_io_rate"]["write_bps"] > 0
+
+
 async def test_delete_host(db):
     """ลบ host + data ทั้งหมด."""
 

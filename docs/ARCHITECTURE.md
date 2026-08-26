@@ -78,11 +78,18 @@
   "net": [{"iface": "eth0", "rx_bytes": 0, "tx_bytes": 0}],
   "ports": [{"port": 80, "name": "web", "up": true}],
   "uptime": 86400,
-  "procs": 240
+  "procs": 240,
+  "cpu_cores": 8,
+  "host_info": {"os_name": "Linux", "os_version": "1", "arch": "x86_64", "kernel": "6.1"},
+  "disk_io": [{"device": "sda", "read_bytes": 0, "write_bytes": 0}],
+  "top_process": [{"pid": 1, "name": "init", "cpu_percent": 1.0, "mem_percent": 2.0}],
+  "nic_status": [{"iface": "eth0", "up": true, "ip": "10.0.0.1", "mac": "aa:bb"}],
+  "process_detail": [{"name": "nginx", "pid": 10, "cpu_percent": 1.0, "mem_percent": 2.0}]
 }
 ```
 
-> `net.rx_bytes/tx_bytes` เป็น **cumulative counter** — server คำนวณ rate (bytes/s) จาก delta เอง
+> `net.rx_bytes/tx_bytes` และ `disk_io.read/write_bytes` เป็น **cumulative counter** — server คำนวณ rate (bytes/s) จาก delta เอง
+> `top_process`/`nic_status`/`process_detail` ต้องใช้ **psutil** (stdlib ได้แค่ `host_info`/`cpu_cores`/`disk_io` บน Linux) — ว่างถ้าไม่มี
 
 ## ข้อจำกัดที่ต้องรู้
 

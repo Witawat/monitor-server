@@ -198,6 +198,7 @@ setScale();
 - **ปุ่ม "แก้ไข"** (toolbar): modal แก้ hostname/tags + remote config (interval/watch/ports/max_batch) + ลบ host (confirm) — ค่าตั้งผ่านนี้ถูกเก็บเป็น `desired_config` แล้ว agent pull ไป apply (ไม่ restart)
 - **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d,30d,45d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector — plot ทีละตัวเดียว กันสเกลเพี้ยน)
 - alert ที่ active ของ host นี้: แถบเตือนสีแดง/เหลืองด้านบน
+- **ข้อมูลเพิ่ม (Chunk B)**: แถบ host info (OS/arch/kernel + cpu cores + disk ⇄ rate) + ตาราง "Process ที่ใช้ทรัพยากรสูง" (PID/name/CPU/Mem) + ตาราง "Network Interfaces" (iface/up/ip/mac) — ซ่อนถ้าไม่มีข้อมูล (agent ไม่มี psutil)
 - data: `GET /api/v1/hosts/{id}/metrics?range=...&metrics=<metric>` (ระบุ metric เดียว → แสดงเส้นเดียว + y-axis ตั้งชื่อตาม unit)
 
 ### 5.4 Alerts

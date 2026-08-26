@@ -14,13 +14,18 @@ from agent.collect import (
 )
 from agent.config import _parse_ports
 from shared.metric import (
+    DiskIOSample,
     DiskSample,
+    HostInfo,
     MemorySample,
     NetSample,
+    NicSample,
     PortSample,
+    ProcessDetail,
     ServiceSample,
     Snapshot,
     SwapSample,
+    TopProcessSample,
 )
 
 
@@ -56,6 +61,24 @@ class _FakeProvider:
 
     def ports(self, ports):
         return [PortSample(port=p, name=n, up=False) for p, n in ports]
+
+    def disk_io(self):
+        return [DiskIOSample(device="sda", read_bytes=100, write_bytes=50)]
+
+    def top_process(self):
+        return [TopProcessSample(pid=1, name="init", cpu_percent=1.0, mem_percent=2.0)]
+
+    def host_info(self):
+        return HostInfo(os_name="Linux", os_version="1", arch="x86_64", kernel="6.1")
+
+    def cpu_cores(self):
+        return 8
+
+    def nic_status(self):
+        return [NicSample(iface="eth0", up=True, ip="10.0.0.1", mac="aa:bb")]
+
+    def process_detail(self, watch):
+        return [ProcessDetail(name=n, pid=1, cpu_percent=1.0, mem_percent=2.0) for n in watch]
 
 
 def test_parse_meminfo():

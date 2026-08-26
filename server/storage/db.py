@@ -45,6 +45,26 @@ METRIC_UNITS: dict[str, str] = {
     "procs": "",
 }
 
+
+def _json_to_dict(value: Any) -> dict[str, Any]:
+    """พาร์ส JSON เป็น dict; คืน {} ถ้าไม่ใช่ dict (กันค่าขยะ)."""
+
+    try:
+        data = json.loads(value) if value else {}
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _json_to_list(value: Any) -> list[dict[str, Any]]:
+    """พาร์ส JSON เป็น list; คืน [] ถ้าไม่ใช่ list."""
+
+    try:
+        data = json.loads(value) if value else []
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+    return data if isinstance(data, list) else []
+
 # คอลัมน์ metric ที่เก็บใน rollup (เฉลี่ยต่อ bucket) — ตรงกับตาราง metrics
 _ROLLUP_COLUMNS = [
     "cpu_percent",
@@ -131,6 +151,16 @@ CREATE TABLE IF NOT EXISTS port_samples (
 );
 CREATE INDEX IF NOT EXISTS idx_port_host_ts ON port_samples(host_id, ts);
 
+CREATE TABLE IF NOT EXISTS disk_io_samples (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_id     TEXT NOT NULL,
+    ts          INTEGER NOT NULL,
+    device      TEXT NOT NULL DEFAULT '',
+    read_bytes  INTEGER NOT NULL DEFAULT 0,
+    write_bytes INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_diskio_host_ts ON disk_io_samples(host_id, ts);
+
 CREATE TABLE IF NOT EXISTS alert_rules (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     name      TEXT NOT NULL,
@@ -213,6 +243,21 @@ class Database:
             await self._require().execute(
                 "ALTER TABLE hosts ADD COLUMN desired_config TEXT NOT NULL DEFAULT '{}'"
             )
+        # columns เพิ่ม (Chunk B) — ตรวจ/เพิ่มเฉพาะที่ขาด
+        mcur = await self._require().execute("PRAGMA table_info(metrics)")
+        metric_cols = [r["name"] for r in await mcur.fetchall()]
+        metric_adds = {
+            "cpu_cores": "INTEGER NOT NULL DEFAULT 0",
+            "host_info": "TEXT NOT NULL DEFAULT '{}'",
+            "top_process": "TEXT NOT NULL DEFAULT '[]'",
+            "nic_status": "TEXT NOT NULL DEFAULT '[]'",
+            "process_detail": "TEXT NOT NULL DEFAULT '[]'",
+        }
+        for col, decl in metric_adds.items():
+            if col not in metric_cols:
+                await self._require().execute(f"ALTER TABLE metrics ADD COLUMN {col} {decl}")
+        if set(metric_adds) - set(metric_cols):
+            await self._require().commit()
 
     async def close(self) -> None:
         """ปิด connection."""
@@ -422,6 +467,34 @@ class Database:
             snap.swap.used,
             snap.uptime,
             snap.procs,
+            snap.cpu_cores,
+            json.dumps(
+                {
+                    "os_name": snap.host_info.os_name,
+                    "os_version": snap.host_info.os_version,
+                    "arch": snap.host_info.arch,
+                    "kernel": snap.host_info.kernel,
+                },
+                ensure_ascii=False,
+            ),
+            json.dumps(
+                [
+                    {"pid": p.pid, "name": p.name, "cpu_percent": p.cpu_percent, "mem_percent": p.mem_percent}
+                    for p in snap.top_process
+                ],
+                ensure_ascii=False,
+            ),
+            json.dumps(
+                [{"iface": n.iface, "up": n.up, "ip": n.ip, "mac": n.mac} for n in snap.nic_status],
+                ensure_ascii=False,
+            ),
+            json.dumps(
+                [
+                    {"name": p.name, "pid": p.pid, "cpu_percent": p.cpu_percent, "mem_percent": p.mem_percent}
+                    for p in snap.process_detail
+                ],
+                ensure_ascii=False,
+            ),
         )
 
     async def insert_snapshot(self, snap: Snapshot) -> None:
@@ -433,8 +506,8 @@ class Database:
             INSERT INTO metrics (
                 host_id, ts, cpu_percent, load1, load5, load15,
                 mem_total, mem_used, mem_percent, swap_total, swap_used,
-                uptime, procs
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                uptime, procs, cpu_cores, host_info, top_process, nic_status, process_detail
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             self._metrics_values(snap),
         )
@@ -470,6 +543,14 @@ class Database:
                 """,
                 (snap.host_id, snap.ts, p.port, p.name, 1 if p.up else 0),
             )
+        for dio in snap.disk_io:
+            await conn.execute(
+                """
+                INSERT INTO disk_io_samples (host_id, ts, device, read_bytes, write_bytes)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (snap.host_id, snap.ts, dio.device, dio.read_bytes, dio.write_bytes),
+            )
         await conn.commit()
 
     async def insert_batch(self, snaps: list[Snapshot]) -> None:
@@ -482,8 +563,8 @@ class Database:
                 INSERT INTO metrics (
                     host_id, ts, cpu_percent, load1, load5, load15,
                     mem_total, mem_used, mem_percent, swap_total, swap_used,
-                    uptime, procs
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    uptime, procs, cpu_cores, host_info, top_process, nic_status, process_detail
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 self._metrics_values(snap),
             )
@@ -518,6 +599,14 @@ class Database:
                     VALUES (?, ?, ?, ?, ?)
                     """,
                     (snap.host_id, snap.ts, p.port, p.name, 1 if p.up else 0),
+                )
+            for dio in snap.disk_io:
+                await conn.execute(
+                    """
+                    INSERT INTO disk_io_samples (host_id, ts, device, read_bytes, write_bytes)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (snap.host_id, snap.ts, dio.device, dio.read_bytes, dio.write_bytes),
                 )
         await conn.commit()
 
@@ -625,7 +714,8 @@ class Database:
         conn = self._require()
         cur = await conn.execute(
             """
-            SELECT cpu_percent, mem_percent, mem_total, mem_used, uptime
+            SELECT cpu_percent, mem_percent, mem_total, mem_used, uptime,
+                   cpu_cores, host_info, top_process, nic_status, process_detail
             FROM metrics WHERE host_id = ? ORDER BY ts DESC LIMIT 1
             """,
             (host_id,),
@@ -634,9 +724,14 @@ class Database:
         if row is None:
             return {"cpu_percent": 0.0, "mem_percent": 0.0, "uptime": 0}
         d = dict(row)
+        d["host_info"] = _json_to_dict(d.get("host_info"))
+        d["top_process"] = _json_to_list(d.get("top_process"))
+        d["nic_status"] = _json_to_list(d.get("nic_status"))
+        d["process_detail"] = _json_to_list(d.get("process_detail"))
         d["disk_percent"] = await self._latest_disk_percent(host_id)
         d["disk_total"] = await self._latest_disk_total(host_id)
         d["net_rx"], d["net_tx"] = await self._latest_net_rate(host_id)
+        d["disk_io_rate"] = await self._latest_disk_io_rate(host_id)
         d["trend"] = await self._recent_cpu_trend(host_id)
         d["services_down"] = await self._recent_services_down(host_id)
         return d
@@ -699,6 +794,29 @@ class Database:
         rx_rate = max(0, (int(newest["rx"]) - int(prev["rx"]))) / dt
         tx_rate = max(0, (int(newest["tx"]) - int(prev["tx"]))) / dt
         return rx_rate, tx_rate
+
+    async def _latest_disk_io_rate(self, host_id: str) -> dict[str, float]:
+        """คำนวณ disk I/O rate (read/write bytes/s) จาก 2 จุดล่าสุด (default 0)."""
+
+        rows = list(
+            await self._require().execute_fetchall(
+                """
+                SELECT ts, SUM(read_bytes) AS rd, SUM(write_bytes) AS wr
+                FROM disk_io_samples WHERE host_id = ?
+                GROUP BY ts ORDER BY ts DESC LIMIT 2
+                """,
+                (host_id,),
+            )
+        )
+        if len(rows) < 2:
+            return {"read_bps": 0.0, "write_bps": 0.0}
+        newest, prev = rows[0], rows[1]
+        dt = int(newest["ts"]) - int(prev["ts"])
+        if dt <= 0:
+            return {"read_bps": 0.0, "write_bps": 0.0}
+        read_rate = max(0, (int(newest["rd"]) - int(prev["rd"]))) / dt
+        write_rate = max(0, (int(newest["wr"]) - int(prev["wr"]))) / dt
+        return {"read_bps": read_rate, "write_bps": write_rate}
 
     async def _latest_disk_percent(self, host_id: str) -> float:
         """คืน disk percent ของ mount แรกใน snapshot ล่าสุด (default 0)."""
