@@ -55,6 +55,9 @@ notify = ["webhook", "telegram"]
 
 [auth]
 allow_registration = true      # agent ใหม่ push ครั้งแรก auto-register
+login_rate_per_min = 5         # สูงสุดพยายาม login/นาที ต่อ IP (กันสุ่มรหัส) — 0 = ไม่จำกัด
+login_global_per_min = 30      # สูงสุดรวมทุก IP/นาที (กัน botnet) — 0 = ไม่จำกัด
+audit_keep_days = 30           # เก็บประวัติ login (audit log) กี่วัน
 ```
 
 > หมายเหตุ TOML: ใช้ `[[alerting.rules]]` สำหรับ **array ของ rule** (ซ้ำบล็อกได้), และ `[alerting.notifiers.xxx]` สำหรับ nested table.

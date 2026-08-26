@@ -82,7 +82,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram) + host-down
 - [x] ตั้งค่า Webhook/Telegram ผ่าน WebUI (หน้า ตั้งค่า → การแจ้งเตือน): ปุ่มทดสอบ + toggle + badge สถานะ + wizard ครั้งแรก — เก็บใน DB (`state_kv["notifiers"]`), มีผลทันทีไม่ restart, config.toml เป็น fallback
 - [x] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token
-- [x] Auth/security: API token ต่อ host (X-Agent-Token), rate limit ingest + login, CSP headers
+- [x] Auth/security: API token ต่อ host (X-Agent-Token), rate limit ingest + login (DB-based ต่อ IP + รวมทุก IP กัน botnet, ตั้งค่าได้ใน `[auth]`), audit log login (สำเร็จ/ล้ม/ถูกจำกัด, ดูในหน้า ตั้งค่า), CSP headers
 
 ## Build EXE (บันทึก)
 - **`scripts/build.bat`** — ตัวหลัก build ทั้ง 2 exe (PyInstaller onefile) + สร้าง icon + บีบด้วย UPX ล่าสุด ผ่าน cmd ตรง (ไม่ต้อง powershell) — ดาวน์โหลด UPX อัตโนมัติครั้งแรก

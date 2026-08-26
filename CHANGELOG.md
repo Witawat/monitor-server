@@ -7,7 +7,8 @@
 ## [Unreleased]
 
 ### เพิ่ม
-- **ตั้งค่า Webhook / Telegram ผ่าน WebUI** (หน้า ตั้งค่า → การแจ้งเตือน): การ์ด 2 ช่องทาง + ปุ่มทดสอบ (webhook POST จริง / telegram ส่งข้อความทดสอบ) + toggle เปิด/ปิด + badge สถานะ + ตัวช่วยหา Bot Token/Chat ID — เก็บใน DB (`state_kv`), มีผลทันทีไม่ต้อง restart, config.toml เดิมเป็นค่าเริ่มต้น (fallback)
+- **กัน brute-force login**: rate limit เก็บใน DB (persist ข้าม restart) — ต่อ IP (`login_rate_per_min`, default 5/นาที) + รวมทุก IP (`login_global_per_min`, default 30/นาที กัน botnet) + ตั้งค่าได้ใน config.toml `[auth]` — เกิน = `429`
+- **Audit log login**: บันทึกทุกความพยายาม (สำเร็จ/ล้มเหลว/ถูกจำกัด) ลง DB + ดูในหน้า ตั้งค่า → "ประวัติการเข้าสู่ระบบ" (API `GET /api/v1/auth/audit`); retention `audit_keep_days` (default 30 วัน)
 - **ดึง Chat ID อัตโนมัติ** (ปุ่มใน Telegram card): ใช้ getUpdates — กรอก Bot Token แล้วกดปุ่ม ได้ chat_id เอง (ต้องเคยแชทกับบอท ≥ 1 ครั้ง); ตัวช่วยอธิบายว่า Bot Token ต้องสร้างเองผ่าน @BotFather
 - **Wizard ตั้งค่าการแจ้งเตือนครั้งแรก**: ยังไม่ตั้งค่าช่องใด → modal เลือกช่องทาง แล้วพาไปกรอกค่าทีละขั้น (scroll + highlight + focus)
 - หน้า Alerts: checkbox webhook/telegram ต่อกฎ แสดง hint "(ยังไม่ได้ตั้งค่า)" ถ้าช่องนั้นยังไม่ตั้งค่า

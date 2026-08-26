@@ -43,3 +43,6 @@ notify = ["webhook", "telegram"]
 
 [auth]
 allow_registration = true
+login_rate_per_min = 5        # สูงสุดพยายาม login/นาที ต่อ IP (กันสุ่มรหัส)
+login_global_per_min = 30     # สูงสุดรวมทุก IP/นาที (กัน botnet)
+audit_keep_days = 30          # เก็บประวัติ login (audit log) กี่วัน

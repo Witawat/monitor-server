@@ -13,6 +13,13 @@
     <span id="newTokenResult"></span>
   </div>
 
+  <h3 style="color:var(--text-2);margin:16px 0 8px">ประวัติการเข้าสู่ระบบ</h3>
+  <p class="hint">ทุกความพยายาม login (สำเร็จ / ล้มเหลว / ถูกจำกัดอัตรา) ถูกบันทึก — กันการสุ่มรหัสผ่าน</p>
+  <table>
+    <thead><tr><th>เวลา</th><th>เหตุการณ์</th><th>IP</th><th>ผล</th></tr></thead>
+    <tbody id="auditTable"></tbody>
+  </table>
+
   <h3 style="color:var(--text-2);margin:24px 0 8px">การแจ้งเตือน (Webhook / Telegram)</h3>
   <p class="hint">ตั้งค่าช่องทางรับการแจ้งเตือน alert — บันทึกแล้วมีผลทันที (ไม่ต้อง restart server)</p>
   <div class="notif-grid">

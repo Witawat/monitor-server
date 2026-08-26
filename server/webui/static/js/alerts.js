@@ -162,11 +162,13 @@
 
   async function loadSettings() {
     try {
-      const [tokens, status] = await Promise.all([
+      const [tokens, status, audit] = await Promise.all([
         api('/api/v1/auth/tokens'),
         api('/api/status'),
+        api('/api/v1/auth/audit'),
       ]);
       renderServerInfo(status);
+      renderAudit(audit);
       const tbody = document.getElementById('tokenTable');
       if (!tokens.length) {
         tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-2)">ยังไม่มี host/token</td></tr>';
@@ -206,6 +208,31 @@
   }
 
   // ── การแจ้งเตือน (Webhook / Telegram) — ตั้งค่าผ่าน UI, เก็บใน DB ──
+
+  function renderAudit(list) {
+    const tbody = document.getElementById('auditTable');
+    if (!tbody) return;
+    if (!list || !list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-2)">ยังไม่มีประวัติ</td></tr>';
+      return;
+    }
+    const actionLabel = {
+      'login.ok': 'เข้าสู่ระบบ',
+      'login.fail': 'เข้าสู่ระบบ (ล้มเหลว)',
+      'login.blocked': 'ถูกจำกัดอัตรา',
+    };
+    const rows = list.map((e) => {
+      const tr = document.createElement('tr');
+      const d = new Date((e.ts || 0) * 1000).toLocaleString('th-TH');
+      [d, actionLabel[e.action] || e.action, e.ip || '—', e.ok ? 'สำเร็จ' : 'ล้มเหลว'].forEach((t) => {
+        const td = document.createElement('td');
+        td.textContent = t;
+        tr.appendChild(td);
+      });
+      return tr;
+    });
+    tbody.replaceChildren(...rows);
+  }
 
   async function loadNotifiers() {
     try {

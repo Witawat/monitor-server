@@ -90,8 +90,10 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 ## Auth (WebUI)
 ### `POST /api/v1/auth/login`
 - Body: `{"username","password"}` → set HttpOnly cookie, `200 {"ok":true}`
+- **rate limit**: สูงสุด `auth.login_rate_per_min` ครั้ง/นาทีต่อ IP + `auth.login_global_per_min` รวมทุก IP → เกิน = `429` (บันทึก audit ทุกความพยายาม)
 ### `POST /api/v1/auth/logout`
 ### `GET /api/v1/auth/me` — ข้อมูลผู้ใช้ปัจจุบัน
+### `GET /api/v1/auth/audit` *(admin)* — ประวัติความปลอดภัย (login สำเร็จ/ล้มเหลว/ถูกจำกัด) เรียงใหม่ก่อน 50 รายการ
 ### `GET /api/v1/auth/tokens` *(admin)* — list agent tokens
 ### `POST /api/v1/auth/tokens` *(admin)* — gen token ต่อ host_id
 ### `DELETE /api/v1/auth/tokens/{host_id}` *(admin)* — revoke

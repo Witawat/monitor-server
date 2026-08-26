@@ -87,9 +87,12 @@ class AlertingConfig(BaseModel):
 
 
 class AuthConfig(BaseModel):
-    """การตั้งค่า auth (ให้ agent ใหม่ auto-register ได้ไหม)."""
+    """การตั้งค่า auth (auto-register agent + กัน brute-force login)."""
 
     allow_registration: bool = True
+    login_rate_per_min: int = Field(default=5, ge=0)      # สูงสุด/นาที ต่อ IP
+    login_global_per_min: int = Field(default=30, ge=0)   # สูงสุด/นาที รวมทุก IP (กัน botnet)
+    audit_keep_days: int = Field(default=30, ge=0)        # เก็บประวัติ login (audit log)
 
 
 class AppConfig(BaseModel):

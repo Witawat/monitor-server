@@ -222,6 +222,7 @@ setScale();
 │ ข้อมูล Server    [info-grid: version/host:port/...]│
 │ Agent Token     [table: host_id | token | revoke] │
 │                 [input host_id] [สร้าง token]      │
+│ ประวัติการเข้าสู่ระบบ [table: เวลา | เหตุการณ์ | IP | ผล]│
 │ การแจ้งเตือน (Webhook / Telegram)                  │
 │ ┌────────────────────┐ ┌────────────────────┐     │
 │ │ Webhook [badge]    │ │ Telegram [badge]   │     │
@@ -232,7 +233,8 @@ setScale();
 │ └────────────────────┘ └────────────────────┘     │
 └──────────────────────────────────────────────────┘
 ```
-- 3 ส่วน: ข้อมูล Server (read-only) / Agent Token (gen/revoke) / **การแจ้งเตือน** (Webhook + Telegram)
+- 4 ส่วน: ข้อมูล Server (read-only) / Agent Token (gen/revoke) / **ประวัติการเข้าสู่ระบบ** / **การแจ้งเตือน** (Webhook + Telegram)
+- **ประวัติการเข้าสู่ระบบ**: ตาราง audit (เวลา/เหตุการณ์/IP/ผล) จาก `GET /api/v1/auth/audit` — login สำเร็จ/ล้มเหลว/ถูกจำกัดอัตรา; render ผ่าน `textContent` (กัน XSS); rate limit login เก็บใน DB (ข้าม restart) ต่อ IP + รวมทุก IP
 - **การแจ้งเตือน**: การ์ด 2 ช่องทาง (`.notif-card` grid responsive) — ฟิลด์ค่า + ปุ่ม **ทดสอบ** (POST จริง) + toggle **เปิดใช้งาน** + ปุ่ม **บันทึก**; badge สถานะ (`พร้อมใช้งาน`/`ปิดใช้งาน`/`ยังไม่ได้ตั้งค่า`)
 - ค่าถูกเก็บใน DB (`state_kv["notifiers"]`) — บันทึกแล้ว **มีผลทันที ไม่ต้อง restart**; config.toml เดิมเป็นค่าเริ่มต้น (fallback)
 - Telegram: bot_token เป็น password field + ปุ่มแสดง/ซ่อน; **"ดึง Chat ID อัตโนมัติ"** (POST `/settings/notifiers/telegram/chatid` → getUpdates → กรอกให้เอง); ตัวช่วย "วิธีหา Bot Token / Chat ID" (collapsible — อธิบายว่า Bot Token สร้างเองผ่าน @BotFather / Chat ID ดึงอัตโนมัติได้); ปุ่มทดสอบ = getMe + sendMessage จริง

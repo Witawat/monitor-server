@@ -160,6 +160,22 @@ CREATE TABLE IF NOT EXISTS state_kv (
     k TEXT PRIMARY KEY,
     v TEXT
 );
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    ip TEXT NOT NULL,
+    ts  REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_login_attempts_ts ON login_attempts(ts);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts     REAL NOT NULL,
+    action TEXT NOT NULL,
+    ip     TEXT,
+    detail TEXT,
+    ok     INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts);
 """
 
 
@@ -306,6 +322,65 @@ class Database:
         """ลบค่า state."""
 
         await self._require().execute("DELETE FROM state_kv WHERE k = ?", (key,))
+        await self._require().commit()
+
+    # ── login rate limit + audit log (กัน brute-force, persist ข้าม restart) ──
+
+    async def record_login_attempt(self, ip: str) -> None:
+        """บันทึกความพยายาม login (ใช้คำนวณ rate limit ต่อ IP + รวมทุก IP)."""
+
+        await self._require().execute(
+            "INSERT INTO login_attempts (ip, ts) VALUES (?, ?)", (ip, time.time())
+        )
+        await self._require().commit()
+
+    async def count_login_attempts(self, ip: str, since: float) -> int:
+        """นับความพยายาม login ของ IP หนึ่ง ภายใน window (sliding)."""
+
+        cur = await self._require().execute(
+            "SELECT COUNT(*) AS n FROM login_attempts WHERE ip = ? AND ts >= ?", (ip, since)
+        )
+        row = await cur.fetchone()
+        return int(row["n"]) if row else 0
+
+    async def count_login_attempts_all(self, since: float) -> int:
+        """นับความพยายาม login รวมทุก IP (กัน botnet ที่กระจายหลาย IP)."""
+
+        cur = await self._require().execute(
+            "SELECT COUNT(*) AS n FROM login_attempts WHERE ts >= ?", (since,)
+        )
+        row = await cur.fetchone()
+        return int(row["n"]) if row else 0
+
+    async def prune_login_attempts(self, before: float) -> None:
+        """ลบ record login ที่เก่ากว่า window (กันตารางโต)."""
+
+        await self._require().execute("DELETE FROM login_attempts WHERE ts < ?", (before,))
+        await self._require().commit()
+
+    async def add_audit(self, action: str, ip: str | None = None, detail: str | None = None, ok: bool = False) -> None:
+        """บันทึกเหตุการณ์ (login สำเร็จ/ล้มเหลว/ถูกจำกัด) ลง audit log."""
+
+        await self._require().execute(
+            "INSERT INTO audit_log (ts, action, ip, detail, ok) VALUES (?, ?, ?, ?, ?)",
+            (time.time(), action, ip, detail, 1 if ok else 0),
+        )
+        await self._require().commit()
+
+    async def list_audit(self, limit: int = 50) -> list[dict[str, Any]]:
+        """คืน audit log ล่าสุด (ใหม่ก่อน)."""
+
+        cur = await self._require().execute(
+            "SELECT id, ts, action, ip, detail, ok FROM audit_log ORDER BY ts DESC, id DESC LIMIT ?",
+            (limit,),
+        )
+        rows = await cur.fetchall()
+        return [dict(r) for r in rows]
+
+    async def prune_audit(self, before: float) -> None:
+        """ลบ audit log ที่เก่ากว่า retention (audit_keep_days)."""
+
+        await self._require().execute("DELETE FROM audit_log WHERE ts < ?", (before,))
         await self._require().commit()
 
     async def upsert_host(

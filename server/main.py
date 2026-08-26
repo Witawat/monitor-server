@@ -26,7 +26,7 @@ from server.api.ingest import router as ingest_router
 from server.api.metrics import router as metrics_router
 from server.api.settings import router as settings_router
 from server.config import AppConfig, load_config
-from server.ingest import IngestService, RateLimiter
+from server.ingest import IngestService
 from server.maintenance import RetentionWorker, RollupWorker
 from server.storage.db import Database
 from server.webui.auth import hash_password, verify_session
@@ -130,7 +130,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         data_dir = _resolve_dir(cfg.server.data_dir)
         data_dir.mkdir(parents=True, exist_ok=True)
         app.state.session_secret = _resolve_secret(cfg.webui.secret_key, data_dir)
-        app.state.login_limiter = RateLimiter()
         db = Database(data_dir / "monitor.db", rollup_intervals=cfg.storage.rollup_intervals)
         await db.connect()
         app.state.db = db

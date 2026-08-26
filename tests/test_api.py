@@ -371,3 +371,32 @@ def test_telegram_scan_chatid_nonjson(tmp_path, monkeypatch):
         r = c.post("/api/v1/settings/notifiers/telegram/chatid", json={"bot_token": "1:AAA"})
         assert r.status_code == 200
         assert r.json()["ok"] is False
+
+
+def test_login_rate_limit(tmp_path):
+    """login เกินอัตรา (5/นาที/IP) → 429 + audit บันทึกทุกความพยายาม."""
+
+    with _client(tmp_path, authed=False) as c:
+        for _ in range(5):
+            r = c.post("/api/v1/auth/login", json={"username": "admin", "password": "wrong"})
+            assert r.status_code == 401
+        r = c.post("/api/v1/auth/login", json={"username": "admin", "password": "wrong"})
+        assert r.status_code == 429
+
+    with _client(tmp_path, authed=True) as c:
+        audit = c.get("/api/v1/auth/audit").json()
+        assert len(audit) == 6  # 5 ล้มเหลว + 1 ถูกจำกัด
+        assert sum(1 for a in audit if a["action"] == "login.fail") == 5
+        assert sum(1 for a in audit if a["action"] == "login.blocked") == 1
+
+
+def test_login_success_audit(tmp_path):
+    """login ถูกต้อง → audit บันทึก login.ok + เข้าสู่ระบบได้."""
+
+    with _client(tmp_path, authed=False) as c:
+        r = c.post("/api/v1/auth/login", json={"username": "admin", "password": "secretpw"})
+        assert r.status_code == 200
+
+    with _client(tmp_path, authed=True) as c:
+        audit = c.get("/api/v1/auth/audit").json()
+        assert any(a["action"] == "login.ok" and a["ok"] == 1 for a in audit)
