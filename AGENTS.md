@@ -50,6 +50,11 @@ python -m server.main --config config.toml      # หรือ python run.py --c
 # รัน agent (dev — ชี้ไป server ตัวเอง)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 
+# ติดตั้ง agent เป็น service อัตโนมัติ (เขียน agent.cfg + NSSM/systemd) — ไม่ต้อง install script แยก
+python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 [--ports 80:web,443:https] [--watch nginx,mysql]
+# ลบ service
+python -m agent.agent --uninstall
+
 # ตรวจก่อนส่งงาน (ต้องผ่านหมดก่อน PR)
 ruff check .; mypy server agent shared; pytest -q
 

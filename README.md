@@ -58,6 +58,11 @@ python -m server.main --config config.toml       # เปิด http://127.0.0.1
 
 # agent (dev — ชี้ไป server ตัวเอง, token จาก WebUI)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+
+# ติดตั้ง agent เป็น service อัตโนมัติ (เขียน agent.cfg + สร้าง service ให้เอง: Windows NSSM / Linux systemd)
+python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 [--ports 80:web,443:https] [--watch nginx,mysql]
+# ลบ service
+python -m agent.agent --uninstall
 ```
 
 ## Build EXE (server + agent)
@@ -74,7 +79,7 @@ scripts\build.bat                 # ตัวหลัก — cmd ตรง
 - ผลลัพธ์ใน `dist/`: `monitor-server.exe` + `monitor-agent.exe` (onefile, มี icon, UPX แล้ว)
 - icon: `scripts/make_icon.py` → `build/monitor.ico` (16–256) · UPX: `scripts/tools/upx/upx.exe` (ดาวน์โหลดอัตโนมัติครั้งแรก)
 - **ไฟล์อยู่ข้าง exe**: รัน exe จากที่ไหนก็ได้ — `config.toml`/`data/`/`logs/` จะถูกสร้าง/ใช้ข้างตัว exe; ครั้งแรกถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin
-- **service**: `monitor-server.exe --service install|start|stop|remove` (NSSM) · agent ใช้ `scripts\install-agent.ps1` · Linux ใช้ systemd unit
+- **service**: `monitor-server.exe --service install|start|stop|remove` (NSSM) · agent `--install` สร้าง service เอง (NSSM/systemd) หรือ `scripts\install-agent.ps1` · Linux ใช้ systemd unit
 - ดูรายละเอียดเต็ม: `docs/BUILD.md`
 
 ## ทดสอบ EXE ที่ build

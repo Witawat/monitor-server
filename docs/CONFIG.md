@@ -63,11 +63,18 @@ allow_registration = true      # agent ใหม่ push ครั้งแร�
 - `rollup_intervals` ต้องเรียงจากละเอียดไปหยาบ
 - rate limit / retention ต้องเป็น int ≥ 0
 
-## Agent config (arg/env — ไม่ใช่ไฟล์)
+## Agent config (arg/env/ไฟล์ agent.cfg)
 ```powershell
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
-# env: MONITOR_SERVER_URL / MONITOR_TOKEN / MONITOR_INTERVAL
+# env: MONITOR_SERVER_URL / MONITOR_TOKEN / MONITOR_INTERVAL / MONITOR_PORTS / MONITOR_WATCH
+
+# ติดตั้งเป็น service อัตโนมัติ — เขียน agent.cfg (ข้าง exe/runtime) + สร้าง service ให้เอง
+python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx
+# ลบ service
+python -m agent.agent --uninstall
 ```
+- `agent.cfg` (INI) — ค่าที่ `--install` เขียน; agent อ่านอัตโนมัติเมื่อรันโดยไม่ใส่ args
+- ลำดับความสำคัญ: `--server/--token/--interval` (arg) > `MONITOR_*` (env) > `agent.cfg` (ไฟล์) > default
 
 ## การ gen bcrypt hash
 ```powershell
