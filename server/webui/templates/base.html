@@ -13,26 +13,24 @@
   <header class="topbar">
     <div class="brand">● Monitor</div>
     <div class="search"><input id="searchInput" type="search" placeholder="ค้นหา host…" aria-label="ค้นหา host"></div>
+    <nav class="topnav" aria-label="เมนูหลัก">
+      <a href="#view-fleet" data-nav="fleet">Fleet</a>
+      <a href="#view-alerts" data-nav="alerts">Alerts</a>
+      <a href="#view-settings" data-nav="settings">ตั้งค่า</a>
+    </nav>
     <div class="user">
       <span id="currentUser"></span>
       <button id="logoutBtn">ออกจากระบบ</button>
     </div>
   </header>
 
-  <div class="layout">
-    <nav class="sidebar" aria-label="เมนูหลัก">
-      <a href="#view-fleet" data-nav="fleet">Fleet</a>
-      <a href="#view-alerts" data-nav="alerts">Alerts</a>
-      <a href="#view-settings" data-nav="settings">ตั้งค่า</a>
-    </nav>
-    <main class="content" id="content">
-      <div class="banner error" id="errorBanner" style="display:none"></div>
-      {% include "parts/fleet.html" %}
-      {% include "parts/host.html" %}
-      {% include "parts/alerts.html" %}
-      {% include "parts/settings.html" %}
-    </main>
-  </div>
+  <main class="content" id="content">
+    <div class="banner error" id="errorBanner" style="display:none"></div>
+    {% include "parts/fleet.html" %}
+    {% include "parts/host.html" %}
+    {% include "parts/alerts.html" %}
+    {% include "parts/settings.html" %}
+  </main>
 
   <footer class="statusbar" id="statusbar">Monitor v{{ version }}</footer>
 </div>

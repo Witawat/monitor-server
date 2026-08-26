@@ -55,6 +55,7 @@ def test_load_config_defaults():
     assert cfg.server.port == 18080
     assert cfg.ingest.max_batch_size == 100
     assert cfg.storage.wal is True
+    assert cfg.storage.retention_raw_days == 45  # default เก็บกราฟย้อนหลัง 45 วัน
 
 
 def test_port_out_of_range(tmp_path):

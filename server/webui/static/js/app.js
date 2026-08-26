@@ -90,10 +90,10 @@
   window.scrollToSection = scrollToSection;
 
   // nav click → scroll (ไม่เปลี่ยน hash route แบบเดิม)
-  document.querySelectorAll('.sidebar a[data-nav]').forEach((a) => {
+  document.querySelectorAll('.topnav a[data-nav]').forEach((a) => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      document.querySelectorAll('.sidebar a').forEach((x) => x.classList.remove('active'));
+      document.querySelectorAll('.topnav a').forEach((x) => x.classList.remove('active'));
       a.classList.add('active');
       scrollToSection(a.dataset.nav);
     });

@@ -65,7 +65,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 
 ## ฟีเจอร์หลัก (เช็กลิสต์)
 - [x] Fleet dashboard: รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์
-- [x] กราฟย้อนหลัง per metric (time-series SQLite + rollup เก็บ 1m/5m/1h/1d)
+- [x] กราฟย้อนหลัง per metric (time-series SQLite + rollup เก็บ 1m/5m/1h/1d) — ดูย้อนหลังได้สูงสุด 45 วัน (`retention_raw_days`, default 45)
 - [x] Agent push: batch + retry + backoff + queue เมื่อ offline (เก็บในเครื่องแล้วส่งทีหลัง)
 - [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram/email) + host-down
 - [x] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token
@@ -106,10 +106,11 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - รายละเอียดเต็มดู **`docs/CODING_GUIDE.md`** (รูปแบบ code + คำอธิบาย + ตัวอย่าง metric schema)
 
 ## กฎ WebUI
-- WebUI เป็น single-page (SPA) — `templates/base.html` + `templates/parts/*.html` (ใช้ `{% include %}`) — JS สลับ view
+- WebUI เป็น single-page (SPA) แบบ **long page** — `templates/base.html` + `templates/parts/*.html` (ใช้ `{% include %}`) — ทุก section แสดงพร้อมกันเลื่อนยาว, **ไม่มี sidebar** (เมนูนำทาง Fleet/Alerts/ตั้งค่า เป็น `.topnav` แนวนอนใน topbar), คลิก host card → เลือก host + scroll ไป section Host (host select ใน toolbar)
 - JS แยกโมดูลใน `static/js/` (`app`/`dashboard`/`alerts` + `scale`/`format`/`i18n`) — format ตัวเลข/หน่วยรวมใน `format.js` (ห้ามแต่ละหน้าเขียนเอง) · UI scale ทั้งกรอบด้วย `zoom` + `scale.js`
 - dashboard realtime: เลือก host → poll `/api/v1/hosts/{id}/metrics?range=1h` (หรือ SSE ถ้าจะ push) + Chart.js
-- chart: เลือก metric ทีละตัว (chip selector) + range (1h/6h/1d/7d) — y-axis ตั้งชื่อตาม unit, ค่า format ผ่าน format.js (ไม่ plot ทุก metric รวมกัน กันสเกลเพี้ยน)
+- chart: เลือก metric ทีละตัว (chip selector) + range (1h/6h/1d/7d/30d/45d) — y-axis ตั้งชื่อตาม unit, ค่า format ผ่าน format.js (ไม่ plot ทุก metric รวมกัน กันสเกลเพี้ยน)
+- input/select/textarea/checkbox **ทุกตัวต้องสไตล์เดียวกัน** (rules ใน app.css `input, select, textarea, button`) — ห้ามวิธีเฉพาะแต่ละตัวจนต่างแบบ (ดู `WEBUI_DESIGN.md` §8.0)
 - API อยู่ใต้ `/api/*` — ห้ามชน static · Auth หน้า WebUI (admin user/pass, bcrypt, HttpOnly cookie)
 - กฎ UI ยึด `docs/WEBUI_DESIGN.md` — responsive 360/768/1280, `font-size: clamp`, Chart.js bundle local (ไม่ใช้ CDN)
 

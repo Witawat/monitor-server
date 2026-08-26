@@ -76,7 +76,7 @@ def _ensure_config(path: str) -> str:
         f'secret_key = "{secrets.token_hex(32)}"\n'
         'secure_cookie = false\nsetup_done = true\n\n'
         '[ingest]\nrate_limit_per_min = 1200\nmax_batch_size = 100\noffline_timeout_sec = 60\n\n'
-        '[storage]\nretention_raw_days = 7\nrollup_intervals = ["1m","5m","1h","1d"]\nwal = true\n\n'
+        '[storage]\nretention_raw_days = 45\nrollup_intervals = ["1m","5m","1h","1d"]\nwal = true\n\n'
         "[alerting]\nenabled = true\n\n[alerting.notifiers.webhook]\nurl = \"\"\n\n"
         '[alerting.notifiers.telegram]\nbot_token = ""\nchat_id = ""\n\n'
         "[auth]\nallow_registration = true\n",

@@ -46,7 +46,7 @@ max_batch_size = 200
 offline_timeout_sec = 60
 
 [storage]
-retention_raw_days = 7
+retention_raw_days = 45
 rollup_intervals = ["1m","5m","1h","1d"]
 wal = true
 

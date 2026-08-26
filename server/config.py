@@ -52,7 +52,7 @@ class IngestConfig(BaseModel):
 class StorageConfig(BaseModel):
     """การตั้งค่า SQLite store (retention / rollup / WAL)."""
 
-    retention_raw_days: int = Field(default=7, ge=0)
+    retention_raw_days: int = Field(default=45, ge=0)
     rollup_intervals: list[str] = Field(
         default_factory=lambda: ["1m", "5m", "1h", "1d"]
     )

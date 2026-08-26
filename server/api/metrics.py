@@ -17,7 +17,14 @@ router = APIRouter(
     prefix="/api/v1/hosts", tags=["metrics"], dependencies=[Depends(require_admin)]
 )
 
-_RANGE_SEC: dict[str, int] = {"1h": 3600, "6h": 21600, "1d": 86400, "7d": 604800}
+_RANGE_SEC: dict[str, int] = {
+    "1h": 3600,
+    "6h": 21600,
+    "1d": 86400,
+    "7d": 604800,
+    "30d": 2592000,
+    "45d": 3888000,
+}
 _SAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 _EXPORT_METRICS = [

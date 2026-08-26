@@ -14,7 +14,6 @@ body {
   display: flex;
   flex-direction: column;
 }
-
 /* ── topbar ── */
 .topbar {
   height: 56px;
@@ -40,20 +39,19 @@ body {
   border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 0.8125rem;
 }
 
-/* ── layout ── */
-.layout { display: flex; flex: 1; min-height: 0; }
-.sidebar {
-  width: 200px; flex-shrink: 0;
-  padding: 16px 8px; border-right: 1px solid var(--border);
-  background: var(--surface);
-  display: flex; flex-direction: column; gap: 4px;
+/* ── เมนูนำทางแนวนอนใน topbar (แทน sidebar) ── */
+.topnav { display: flex; align-items: center; gap: 4px; margin-left: 16px; }
+.topnav a {
+  display: inline-flex; align-items: center;
+  padding: 6px 12px; border-radius: 8px; text-decoration: none;
+  color: var(--text-2); font-weight: 500; font-size: 0.875rem;
 }
-.sidebar a {
-  padding: 10px 12px; border-radius: 8px; text-decoration: none;
-  color: var(--text); font-weight: 500;
-}
-.sidebar a.active { background: var(--accent-soft); color: var(--accent); }
-.content { flex: 1; padding: 16px 24px; overflow-y: auto; }
+.topnav a:hover { background: var(--accent-soft); color: var(--accent); }
+.topnav a.active { background: var(--accent); color: #fff; }
+
+/* ── layout (เต็มจอ, ไม่มี sidebar — content ใช้ที่ว่างทั้งหมด) ── */
+.app-root { flex: 1; min-height: 0; }
+.content { flex: 1; padding: 20px 24px; padding-bottom: 64px; overflow-y: auto; }
 .statusbar {
   padding: 8px 16px; border-top: 1px solid var(--border);
   background: var(--surface); color: var(--text-2); font-size: 0.8125rem;
@@ -153,16 +151,33 @@ th { color: var(--text-2); font-weight: 600; }
 .login-card h1 { font-size: 1.25rem; margin: 0 0 16px; color: var(--accent); }
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 0.8125rem; color: var(--text-2); margin-bottom: 4px; }
-.field input, .field select, .field textarea {
-  width: 100%; padding: 8px 12px;
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--surface); color: var(--text); font-size: 0.875rem;
+
+/* ── input/select/textarea ทุกตัว: กล่องสไตล์เดียวกัน (WEBUI_DESIGN.md §8) ──
+   กันตกขอบ/ต่างแบบ — ใช้ tokens ร่วมกัน, focus ring เหมือนกัน */
+input, select, textarea, button {
+  font-family: var(--font);
+  font-size: 0.875rem;
 }
-.field select { appearance: auto; }
-.field input:focus, .field select:focus, .field textarea:focus {
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+select, textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):focus,
+select:focus, textarea:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
 }
-.field input:disabled, .field select:disabled { opacity: 0.6; }
+input:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; }
+select { appearance: auto; }
+::placeholder { color: var(--text-2); opacity: 0.8; }
+
+/* input ที่อยู่ใน toolbar/grid — ให้มีขนาด/งัดแบบเดียวกัน (compact) */
+.toolbar input, .rule-grid input, .toolbar select { padding: 6px 10px; }
+.field input, .field select { padding: 8px 12px; }
+.search input { padding: 8px 12px; }
 
 /* ── ฟอร์ม alert rule: grid + checkbox notify (WEBUI_DESIGN.md §8.1) ── */
 .rule-grid {
@@ -179,26 +194,17 @@ th { color: var(--text-2); font-weight: 600; }
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 0.875rem; color: var(--text); cursor: pointer;
 }
-.check-group .check input { width: auto; margin: 0; accent-color: var(--accent); }
+.check-group .check input, input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .rule-actions { display: flex; gap: 8px; margin-top: 14px; }
-
-/* input กลาง toolbar (search / tags / token) ให้เป็นกล่องแบบเดียวกัน */
-.toolbar input[type="text"], .toolbar input[type="search"], .toolbar input:not([type]),
-.search input {
-  padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
-  background: var(--surface); color: var(--text); font-size: 0.875rem;
-}
-.toolbar input:focus, .search input:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
-}
 .login-error { color: var(--danger); font-size: 0.8125rem; margin-top: 8px; min-height: 1em; }
 
 /* ── responsive (WEBUI_DESIGN.md §3) ── */
 @media (max-width: 767px) {
-  .sidebar { flex-direction: row; width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-  .layout { flex-direction: column; }
+  .topnav { margin-left: 8px; }
+  .topnav a { padding: 6px 8px; font-size: 0.8125rem; }
   .content { padding: 12px; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .search { max-width: 180px; }
 }
 @media (max-width: 479px) {
   .kpi-row { grid-template-columns: 1fr; }

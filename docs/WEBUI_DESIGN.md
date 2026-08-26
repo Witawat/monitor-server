@@ -306,6 +306,24 @@ new Chart(ctx, {
 
 - error: แดงใต้ช่องที่ผิด + ไม่ submit; ปุ่ม Submit disabled จนกว่า validate ผ่าน
 
+### 8.0 กฎรูปแบบ input / select / textarea / checkbox (ทุกหน้า)
+
+> **ต้องสไตล์เดียวกันทั้งหมด** — กันตกขอบ/ต่างแบบ ใช้ tokens ร่วมกัน (`--surface`/`--border`/`--accent`).
+
+| กติกา | ค่า |
+|-------|-----|
+| กล่อง (`input:not(checkbox/radio/range/color/file)`, `select`, `textarea`) | `padding 8px 12px`, `border 1px var(--border)`, `radius 8px`, `bg var(--surface)`, `color var(--text)` |
+| Focus | `border-color var(--accent)` + `box-shadow 0 0 0 2px var(--accent-soft)` |
+| placeholder | `color var(--text-2)`, opacity .8 |
+| disabled | `opacity .6` + `cursor not-allowed` |
+| checkbox / radio | ใช้ `accent-color var(--accent)`, ขนาด 16px ไม่ใส่กล่อง |
+| compact (toolbar/grid) | `padding 6px 10px` (ขนาดรอง) — ยังคง border/radius/bg เท่ากล่องหลัก |
+| ห้าม | inline style ต่าง/สีเฉพาะตัว, ตั้ง font เอง (ใช้ `var(--font)`) |
+
+- **ห้าม**เขียน CSS เฉพาะ `input`/`select` แยกกันจนต่างแบบ — ถ้าเพิ่ม input ชนิดใหม่ ให้ใช้ rule กลางแบบเดียว
+- rule กลางอยู่ใน `app.css` (`input, select, textarea, button` + focus) — เดิมมีแค่ `.field input` ทำให้ select/checkbox ต่างจาก text box (แก้แล้ว)
+- **ไม่มี sidebar** — เมนูนำทาง (Fleet/Alerts/ตั้งค่า) เป็น `.topnav` แนวนอนใน topbar, content กินพื้นที่เต็ม (long page)
+
 ### 8.2 Gen Agent Token
 - เลือก host → ปุ่ม "สร้าง token" → แสดง token ครั้งเดียว (copy ได้) → **ไม่แสดงซ้ำหลังปิด**
 - revoke: confirm dialog ก่อน
