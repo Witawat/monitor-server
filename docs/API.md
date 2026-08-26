@@ -33,6 +33,18 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 ### `DELETE /api/v1/hosts/{id}` *(admin)*
 - ลบ host + metrics + revoke token
 
+### `PUT /api/v1/hosts/{id}/tags` *(admin)*
+- ตั้ง tags ของ host: `{"tags": ["env=prod", "location=th"]}`
+
+### `GET /api/v1/hosts/{id}/config` *(admin)*
+- คืน remote config ที่ตั้งผ่าน UI (`desired_config`) เช่น `{"interval":10,"watch":"nginx","ports":"80:web"}` (ว่างถ้ายังไม่ตั้ง)
+
+### `PUT /api/v1/hosts/{id}/config` *(admin)*
+- ตั้ง remote config ต่อ host (agent จะ pull ไป apply ในรอบถัดไป **ไม่ restart**):
+  `{"interval":10,"watch":"nginx,mysql","ports":"80:web,443:https","max_batch":50,"hostname":"web-prod"}`
+- check: `interval`/`max_batch` ต้อง int >= 1; `watch`/`ports` เป็น string คั่น `,`; `hostname` เปลี่ยนชื่อแสดงใน UI
+- หมายเหตุ: `interval`/`watch`/`ports`/`max_batch` เป็น config ฝั่ง agent (เครื่องถูก monitor) — บันทึกที่ server แล้ว agent ตามมาเอง
+
 ## Metrics
 ### `GET /api/v1/hosts/{id}/metrics?range=1h&metrics=cpu_percent,memory.percent`
 - `range`: `1h` (raw), `6h`/`1d`/`7d`/`30d`/`45d` (rollup อัตโนมัติ), default `1h`

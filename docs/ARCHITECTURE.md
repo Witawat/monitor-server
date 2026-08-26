@@ -60,6 +60,7 @@
 2. **server ingest**: check token → rate limit → validate schema (`shared/metric.py`) → upsert host (last_seen) → insert rows
 3. **alerting** (หลัง insert): อ่าน rules → ถ้าเกิน threshold → บันทึก history + ส่ง notify
 4. **webui**: poll `GET /api/v1/hosts` + `GET /hosts/{id}/metrics?range=` → Chart.js
+5. **remote config** (agent ไม่ restart): server เก็บ `desired_config` ต่อ host → คืนใน ingest response (`config`) → agent อ่านแล้ว apply (interval/watch/ports/max_batch) ทุก loop; ผู้ใช้ตั้งผ่าน WebUI (`PUT /hosts/{id}/config`)
 
 ## Metric schema (โดยย่อ — เต็มใน `shared/metric.py`)
 

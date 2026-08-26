@@ -80,6 +80,12 @@ monitor-agent.exe --uninstall
 - `agent.cfg` (INI) — ค่าที่ `--install` เขียน; agent อ่านอัตโนมัติเมื่อรันโดยไม่ใส่ args
 - ลำดับความสำคัญ: `--server/--token/--interval/--max-batch` (arg) > `MONITOR_*` (env) > `agent.cfg` (ไฟล์) > default
 
+## Remote config (แก้ค่าผ่าน WebUI — ไม่ต้องแตะ agent)
+- ปุ่ม **"แก้ไขค่า Host"** ในหน้า Host → ตั้ง `interval` / `watch` / `ports` / `max_batch` / `hostname`
+- server เก็บเป็น `desired_config` (`hosts.desired_config`, DB) → **คืนให้ agent ใน ingest response** (`config`) → agent **apply เองในรอบถัดไป (ไม่ restart)**
+- การอ่านค่าปัจจุบัน (จาก agent ที่รันอยู่) ไม่อยู่ที่ server — ค่าที่แสดงใน modal คือ `desired_config` ที่ตั้งไว้ล่าสุดจาก WebUI
+- เปลี่ย manual บนเครื่อง agent (`agent.cfg`) ยังมีผลถ้า server ไม่ได้ตั้ง desired_config
+
 ## การ gen bcrypt hash
 ```powershell
 python -m server.webui.auth --hash "รหัสผ่านใหม่"

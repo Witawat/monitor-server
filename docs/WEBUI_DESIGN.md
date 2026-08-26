@@ -195,6 +195,7 @@ setScale();
 └──────────────────────────────────────────────────┘
 ```
 - **Host** (section ในหน้านี้): dropdown เลือก host + KPI row + metric chips + chart (เลือก metric ทีละตัว กันสเกล) — เปลี่ยน host จาก dropdown หรือคลิกการ์ด Fleet
+- **ปุ่ม "แก้ไข"** (toolbar): modal แก้ hostname/tags + remote config (interval/watch/ports/max_batch) + ลบ host (confirm) — ค่าตั้งผ่านนี้ถูกเก็บเป็น `desired_config` แล้ว agent pull ไป apply (ไม่ restart)
 - **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d,30d,45d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector — plot ทีละตัวเดียว กันสเกลเพี้ยน)
 - alert ที่ active ของ host นี้: แถบเตือนสีแดง/เหลืองด้านบน
 - data: `GET /api/v1/hosts/{id}/metrics?range=...&metrics=<metric>` (ระบุ metric เดียว → แสดงเส้นเดียว + y-axis ตั้งชื่อตาม unit)
