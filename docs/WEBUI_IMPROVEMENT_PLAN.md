@@ -152,21 +152,30 @@
 - ทำให้ "ตั้งค่า" เป็นศูนย์รวม: token + ข้อมูล server (version/retention/rollup/เส้นทาง) + ตั้ง webhook/telegram ของ alert
 
 ### แนวทางแก้ไข
-1. **Agent Token**: คงเดิม + เพิ่ม host_id ใหม่ auto-fill (optional)
-2. **ข้อมูล server (read-only)**: แสดง `version`, `host:port`, `data_dir`, `log_dir`, `retention_raw_days`, `rollup_intervals` — ⚠️ `/api/status` คืนแค่ version/host_count/server{host,port,data_dir,log_dir}/ingest{...} ยังไม่มี retention/rollup → **ต้องเพิ่ม field `storage.{retention_raw_days,rollup_intervals}` ใน `/api/status` ก่อน** (งาน server)
-3. **ตั้งค่า alert notifier** (webhook url / telegram bot_token + chat_id):
-   - UI แบบฟอร์ม → บันทึกเขียนกลับ config.toml + reload config (อยู่บน server `maintenance`/`config` ฝั่ง)
-   - เป็นงานใหญ่ (ต้องเขียน config กลับ) → แยก sub-task / งดทำถ้าเกินขอบเขต
+แบ่งเป็น **Milestone** ทำทีละก้าว (แต่ละอันเสร็จส่งได้ ไม่ต้องรอทำทั้งข้อ):
+
+**M5.1 — ข้อมูล server หน้า ตั้งค่า (ทำได้เลย)**
+- เพิ่ม field `storage.retention_raw_days` + `storage.rollup_intervals` ใน `/api/status` (งาน server)
+- หน้า ตั้งค่า แสดง read-only: `version`, `host:port`, `data_dir`, `log_dir`, `retention_raw_days`, `rollup_intervals`
+
+**M5.2 — ตั้งค่า alert notifier (งานใหญ่ — แยกจากกันได้)**
+- UI ฟอร์ม webhook url / telegram bot_token + chat_id → บันทึกเขียนกลับ `config.toml` + reload config
+- ⚠️ ต้องมี endpoint (หรือวิธี) ฝั่ง server ที่อ่าน+เขียน config.toml กลับ + เตือนเรื่อง permission/atomic write
+
+**M5.3 — Agent Token ปรับปรุงเล็กน้อย**
+- host_id ใหม่ auto-fill จาก host ที่ยังไม่มี token / สลับจาก dropdown
 
 ### ไฟล์ที่เกี่ยวข้อง
-- `server/webui/templates/parts/settings.html`
-- `server/webui/static/js/alerts.js` — `loadSettings()`
-- `server/api/` (ถ้าเพิ่ม endpoint บันทึก config) + `server/config.py`
+- `server/webui/templates/parts/settings.html` + `server/webui/static/js/alerts.js` (`loadSettings()`)
+- `server/api/status` (`server/main.py`) — เพิ่ม M5.1
+- `server/api/` + `server/config.py` — M5.2 (เขียน config กลับ / reload)
 - `docs/WEBUI_DESIGN.md` §5.5
 
 ### เกณฑ์เสร็จ
-- [ ] แสดงข้อมูล server/config (version, retention, rollup, data_dir) แบบ read-only
-- [ ] (ถ้าทำ) ตั้ง webhook/telegram ผ่าน UI แล้ว config อัปเดตจริง
+- [ ] M5.1: `/api/status` คืน retention/rollup + หน้า ตั้งค่า แสดงข้อมูล server อ่านได้
+- [ ] M5.1: ข้อมูลแสดงถูก (ตรง config จริง) — ตรวจผ่าน Playwright + pytest
+- [ ] M5.2: ตั้ง webhook/telegram ผ่าน UI แล้ว config อัปเดตจริง (atomic + backup) — ตรวจ config.toml เปลี่ยนจริง
+- [ ] M5.3: host_id auto-fill ทำงาน
 
 ---
 
@@ -198,19 +207,21 @@
 
 ## P2 — ข้อ 7: รายละเอียดเล็กๆ ที่ทำให้ใช้สะดวกขึ้น
 
-### รายการ
-| # | รายการ | ไฟล์ |
-|---|--------|------|
-| 7.1 | แสดงสถานะการกรอง (เช่น "กรอง: ออนไลน์ · #prod") ว่า Fleet กำลังโชว์อะไร | `app.js` |
-| 7.2 | `<title>` ตาม section ที่ scroll ถึง (เช่น "Fleet — Monitor") | `app.js` |
-| 7.3 | ปุ่ม "refresh" มุมบน Fleet (manual) | `fleet.html` / `app.js` |
-| 7.4 | ตัวเลข KPI ใช้สีตาม threshold (CPU ≥80 เหลือง / ≥90 แดง) | `dashboard.js` |
-| 7.5 | badge "ออนไลน์/ออฟไลน์" ใส่ `aria-label` ชัด (accessibility) | `dashboard.js` |
-| 7.6 | chart range default เก็บใน localStorage (จำที่ผู้ใช้เลือกไว้) | `dashboard.js` |
-| 7.7 | fleet card แสดง `swap` หรือ "services หยุด" เตือนเล็กๆ (เช่น redis down) | `dashboard.js` |
+### รายการ (แช่ตามความยาก — ทำเร็ว กับต้องจับฝั่ง data/server)
+| # | รายการ | ไฟล์ | ความยาก |
+|---|--------|------|---------|
+| 7.1 | แสดงสถานะการกรอง (เช่น "กรอง: ออนไลน์ · #prod") ว่า Fleet กำลังโชว์อะไร | `app.js` | ง่าย (client) |
+| 7.2 | `<title>` ตาม section ที่ scroll ถึง (เช่น "Fleet — Monitor") | `app.js` | ง่าย (client) |
+| 7.3 | ปุ่ม "refresh" มุมบน Fleet (manual) | `fleet.html` / `app.js` | ง่าย (client) |
+| 7.4 | ตัวเลข KPI ใช้สีตาม threshold (CPU ≥80 เหลือง / ≥90 แดง) | `dashboard.js` | ง่าย (client) |
+| 7.5 | badge "ออนไลน์/ออฟไลน์" ใส่ `aria-label` ชัด (accessibility) | `dashboard.js` | ง่าย (client) |
+| 7.6 | chart range default เก็บใน localStorage (จำที่ผู้ใช้เลือกไว้) | `dashboard.js` | ง่าย (client) |
+| 7.7 | fleet card แสดง `swap` หรือ "services หยุด" เตือนเล็กๆ (เช่น redis down) | `dashboard.js` | กลาง (ต้องดู data services/swap ใน snapshot) |
 
 ### เกณฑ์เสร็จ
 - [ ] ทำรายการที่เลือกได้ครบ (เลือกทำได้ตามต้องการ ระบุใน commit)
+- [ ] กลุ่ม "ง่าย (client)" (7.1–7.6) ไม่ต้องจับ server / ไม่ต้อง rebuild exe — ทำได้ใน 1 commit เล็ก
+- [ ] 7.7 ต้องเช็ค snapshot มี `services`/`swap` จริงก่อนทำ (ยืนยันกับ `shared/metric.py`)
 
 ---
 
