@@ -96,6 +96,10 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - ใช้ config/data_dir ชั่วคราวแยก (พอร์ต 18089 กันชน dev) + ล้างอัตโนมัติ; **13 checks** ต้องผ่านทั้งหมด
 
 ## กฎการทดสอบ (สำคัญ)
+- **การทดสอบ runtime/UI/flow ต้องรันจาก `.exe` ที่ build (`dist\*.exe`) เท่านั้น** — ห้ามทดสอบจาก `.py` (`python run.py` / `python -m server.main`) เพราะ dev path ต่างจาก production อย่างยิ่ง
+  - เหตุผล: PyInstaller onefile → `sys.frozen=True` ทำให้ `log_dir`/`data_dir`/`config.toml`/`host_id`/`queue.json` ถูก resolve **ข้างไฟล์ exe** (`Path(sys.executable).parent`) ไม่ใช่รากโปรเจกต์
+  - รัน `.py` จะ resolve ไปรากโปรเจกต์ → data/logs อยู่คนละที่ สรุปผลผิดจาก production
+  - สรุปผลจาก `.py` **ไม่ได้** — ต้องรัน `.exe` ที่ build ใหม่ (หลังแก้โค้ดต้อง `scripts\build.bat` ก่อน)
 - เทส server: `pytest -q` — ingest ต้องเทสด้วย mock (ไม่พึ่ง server จริง)
 - เทส agent: ต้องเทส push/retry/backoff ด้วย fake HTTP server (`http.server`/`httpx MockTransport`) — **ห้ามยิง server จริง**
 - ก่อนเทส/รัน ให้ kill process ค้าง: `Get-Process python | Stop-Process` + เช็คพอร์ต 18080 ว่าง

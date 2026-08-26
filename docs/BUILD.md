@@ -46,9 +46,11 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 - `monitor-agent.exe` — agent แบบ onefile (รวม `shared/` อัตโนมัติ)
 
 ### ไฟล์ runtime อยู่ข้าง exe
+- exe เป็น **onefile**: code + static+template ฝังใน exe แต่ **`data/`/`logs/`/`config.toml` ถูกสร้างและ resolve ข้างไฟล์ exe** (`dist\`) — ไม่ได้ฝังใน exe (ครั้งแรกที่รัน exe จะสร้างโฟลเดอร์+config ข้าง exe)
 - รัน exe จากที่ไหนก็ได้ — `config.toml`/`data/`/`logs/` ถูก resolve ข้างตัว exe (ไม่ต้อง cd ไปโปรเจกต์)
 - ครั้งแรกที่รัน server exe ถ้ายังไม่มี config → สร้าง default `config.toml` ข้าง exe + พิมพ์รหัสผ่าน admin (`admin / <random>`) แล้ว login ได้เลย
 - service: `monitor-server.exe --service install|start|stop|remove` (NSSM ชี้ตัว exe เอง) · agent: `scripts\install-agent.ps1` (detect exe) · Linux: systemd unit
+- ⚠️ **ทดสอบ/ใช้ runtime จาก exe เท่านั้น** — ห้ามรันจาก `.py` (`python run.py` / `python -m server.main`) เพราะ dev path resolve ไปรากโปรเจกต์ ต่างจาก exe (ข้าง `dist\`) → data/logs อยู่คนละที่ สรุปผลผิดจาก production. ดู `AGENTS.md` §กฎการทดสอบ.
 
 รายละเอียด:
 - **icon**: `scripts/make_icon.py` (Pillow) วาดหน้าจอ monitor + เส้น pulse → `build/monitor.ico` (16–256) — ใช้เป็น icon ของทั้ง 2 exe

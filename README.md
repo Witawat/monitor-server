@@ -92,6 +92,8 @@ scripts\test_exe.bat        # หรือ: powershell -ExecutionPolicy Bypass -
 
 ตรวจ end-to-end 13 ข้อ: server exe (health/WebUI/login/static), API (ingest/hosts/tags/metrics/alerts CRUD/export CSV), และ agent exe push จริง → host ขึ้น ใช้ config/data_dir ชั่วคราว (พอร์ต 18089) แล้วล้างอัตโนมัติ
 
+> ⚠️ **ทดสอบ/ใช้จาก `.exe` เท่านั้น** — ห้ามรันจาก `.py` (`python run.py`) เพราะ `data/`+`logs/`+`config.toml` ถูก resolve **ข้างไฟล์ exe** (`sys.frozen=True` → ข้าง `dist\`), ไม่ได้ฝังใน exe และไม่ใช่รากโปรเจกต์แบบ dev path. รัน `.py` จะได้ข้อมูลอยู่คนละที่ → สรุปผลผิดจาก production. ดู `AGENTS.md` §กฎการทดสอบ.
+
 ## ตรวจก่อนส่งงาน
 
 ```powershell
