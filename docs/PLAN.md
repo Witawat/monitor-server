@@ -140,6 +140,8 @@
 - UPX: ดาวน์โหลดล่าสุด → `scripts/tools/upx/upx.exe` (`--upx-dir`)
 - PyInstaller: server (`--add-data server\webui`) + agent (`--icon`, onefile)
 - ตรวจ exe รันได้ + WebUI/login ใช้ได้ + size/อัตราบีบ
+- ไฟล์ runtime อยู่ข้าง exe: `config.toml`/`data`/`logs` resolve ข้าง exe; ครั้งแรก auto-create config + พิมพ์ admin pw
+- service: server exe `--service install|start|stop|remove` (NSSM) · agent `install-agent.ps1` · Linux systemd unit
 - ทดสอบ exe end-to-end: `scripts/test_exe.ps1` (health/WebUI/login/static + API ingest/hosts/tags/metrics/alerts CRUD/export CSV + agent exe push) — 13 checks
 
 **เช็กลิสต์:**

@@ -17,28 +17,51 @@ from server.config import load_config
 _SERVICE_NAME = "MonitorServer"
 
 
-def _python() -> str:
-    """คืนเส้นทาง python ปัจจุบันที่ใช้รัน wrapper."""
+def _is_frozen() -> bool:
+    """เช็คว่ากำลังรันเป็น exe (PyInstaller) หรือไม่."""
 
-    return sys.executable
+    return bool(getattr(sys, "frozen", False))
+
+
+def _runtime_dir() -> Path:
+    """ไดเรกทอรีฐาน: ข้าง exe ถ้า frozen, ไม่งั้นรากโปรเจกต์ (dev)."""
+
+    if _is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def _resolved_config(configured: str) -> str:
+    """หาคอนฟิก: path ที่ระบุ หรือข้าง exe/รากโปรเจกต์."""
+
+    candidates = [configured, str(_runtime_dir() / "config.toml")]
+    for c in candidates:
+        if c and Path(c).is_file():
+            return c
+    return configured
 
 
 def _service_cmd(action: str, config_path: str) -> None:
-    """จัดการ service ฝั่ง Windows ผ่าน NSSM (systemd ใช้ scripts/systemd)."""
+    """จัดการ service ฝั่ง Windows ผ่าน NSSM (systemd ใช้ scripts/systemd).
 
-    cfg = load_config(config_path)
-    abs_cfg = str(Path(config_path).resolve())
-    base = f"-m server.main --config {abs_cfg}"
+    Notes:
+        - source (python -m server.main) หรือ exe (frozen) ชี้ไปที่ตัวมันเอง
+        - config/data/logs อยู่ข้าง exe ทำให้ service จัดการง่าย
+    """
+    cfg = load_config(_resolved_config(config_path))
+    abs_cfg = str(_runtime_dir() / "config.toml")
+    if _is_frozen():
+        program = sys.executable  # ตัว exe เอง
+        cmd_args = ["--config", abs_cfg]
+    else:
+        program = sys.executable
+        cmd_args = ["-m", "server.main", "--config", abs_cfg]
     nssm = "nssm"
 
     if action == "install":
-        subprocess.run(
-            [nssm, "install", _SERVICE_NAME, _python(), base],
-            check=False,
-        )
-        # ตั้ง working dir = รากโปรเจกต์ (ให้ path data/logs ตรง)
-        root = str(Path(__file__).resolve().parent)
-        subprocess.run([nssm, "set", _SERVICE_NAME, "AppDirectory", root], check=False)
+        subprocess.run([nssm, "install", _SERVICE_NAME, program, *cmd_args], check=False)
+        # ตั้ง working dir = ข้าง exe (ให้ data/logs ตรงกับ runtime dir)
+        subprocess.run([nssm, "set", _SERVICE_NAME, "AppDirectory", str(_runtime_dir())], check=False)
         print(f"ติดตั้ง service '{_SERVICE_NAME}' แล้ว (พอร์ต {cfg.server.port})")
     elif action == "start":
         subprocess.run([nssm, "start", _SERVICE_NAME], check=False)
@@ -64,7 +87,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.service:
-        _service_cmd(args.service, args.config)
+        _service_cmd(args.service, _resolved_config(args.config))
         return
 
     from server.main import main as run_server

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,17 @@ from agent.push import Backoff, PushQueue, push_batch_status
 from shared.metric import MAX_BATCH_SIZE, snapshot_to_dict
 
 # ── helpers ──
+
+def _default_state_dir() -> Path:
+    """ที่เก็บ state (host_id/queue): ข้าง exe ถ้า frozen, ไม่งั้น ~/.monitor-agent.
+
+    Notes:
+        เก็บข้าง exe ให้ย้าย/จัดการง่าย (AGENTS.md) — ตรงกับ server exe.
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path.home() / ".monitor-agent"
+
 
 def _flush_queue(queue: PushQueue, url: str, token: str) -> None:
     """ลองส่งข้อมูลค้างใน queue เป็น chunk (ไม่เกิน MAX_BATCH_SIZE ต่อครั้ง)."""
@@ -37,9 +49,9 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
 
     Args:
         config: การตั้งค่า agent (server_url/token/interval).
-        state_dir: ไดเรกทอรีเก็บ state (host_id + queue); default คือ ~/.monitor-agent.
+        state_dir: ไดเรกทอรีเก็บ state (host_id + queue); default ข้าง exe หรือ ~/.monitor-agent.
     """
-    base = Path(state_dir) if state_dir else Path.home() / ".monitor-agent"
+    base = Path(state_dir) if state_dir else _default_state_dir()
     host_id = collect.host_id(base / "host_id")
     queue = PushQueue(base / "queue.json")
     backoff = Backoff()

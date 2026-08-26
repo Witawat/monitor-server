@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import secrets
+import sys
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -27,10 +28,72 @@ from server.config import AppConfig, load_config
 from server.ingest import IngestService, RateLimiter
 from server.maintenance import RetentionWorker, RollupWorker
 from server.storage.db import Database
-from server.webui.auth import verify_session
+from server.webui.auth import hash_password, verify_session
 
 _BASE_DIR = Path(__file__).resolve().parent
 _TEMPLATES = Jinja2Templates(directory=str(_BASE_DIR / "webui" / "templates"))
+
+
+def _runtime_dir() -> Path:
+    """ไดเรกทอรีฐานรันไทม์: ข้าง exe ถ้า frozen, ไม่งั้นรากโปรเจกต์ (dev).
+
+    Notes:
+        ให้ config/data/logs อยู่ข้าง exe เดียวกัน ง่ายต่อการจัดการ (AGENTS.md).
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return _BASE_DIR.parent
+
+
+def _resolve_config_path(configured: str) -> str:
+    """หาคอนฟิก: ใช้ path ที่ระบุ หรือ fallback ไปที่ข้าง exe/รากโปรเจกต์."""
+
+    candidates = [configured, str(_runtime_dir() / "config.toml")]
+    for c in candidates:
+        if c and Path(c).is_file():
+            return c
+    return configured
+
+
+def _ensure_config(path: str) -> str:
+    """ถ้า exe (frozen) ยังไม่มี config ให้สร้าง default ข้าง exe + รหัสผ่าน admin ใหม่.
+
+    Returns:
+        เส้นทาง config ที่จะใช้ (สร้างแล้ว ถ้าเป็น frozen ครั้งแรก).
+    """
+    if Path(path).is_file():
+        return path
+    if not getattr(sys, "frozen", False):
+        return path  # dev ปล่อยให้ error ระบุเอง
+    pw = secrets.token_urlsafe(12)
+    cfg_path = _runtime_dir() / "config.toml"
+    cfg_path.write_text(
+        "# config.toml (สรางอัตโนมัติโดย exe ครั้งแรก - แกไขได)\n"
+        '[server]\nhost = "127.0.0.1"\nport = 18080\n'
+        'data_dir = "data"\nlog_dir = "logs"\n\n'
+        '[webui]\nadmin_user = "admin"\n'
+        f'admin_pass_hash = "{hash_password(pw)}"\n'
+        f'secret_key = "{secrets.token_hex(32)}"\n'
+        'secure_cookie = false\nsetup_done = true\n\n'
+        '[ingest]\nrate_limit_per_min = 1200\nmax_batch_size = 100\noffline_timeout_sec = 60\n\n'
+        '[storage]\nretention_raw_days = 7\nrollup_intervals = ["1m","5m","1h","1d"]\nwal = true\n\n'
+        "[alerting]\nenabled = true\n\n[alerting.notifiers.webhook]\nurl = \"\"\n\n"
+        '[alerting.notifiers.telegram]\nbot_token = ""\nchat_id = ""\n\n'
+        "[auth]\nallow_registration = true\n",
+        encoding="utf-8",
+    )
+    print(f"[monitor-server] สร้าง config.toml แล้ว: {cfg_path}")
+    print(f"[monitor-server] เข้าสู่ระบบครั้งแรก: admin / {pw}")
+    return str(cfg_path)
+
+
+def _resolve_dir(value: str) -> Path:
+    """แปลง data_dir/log_dir เป็น absolute; relative = ข้าง runtime dir."""
+
+    p = Path(value)
+    if not p.is_absolute():
+        p = _runtime_dir() / p
+    return p
 
 
 def _resolve_secret(configured: str, data_dir: Path) -> str:
@@ -63,7 +126,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cfg = config or AppConfig()
         app.state.config = cfg
-        data_dir = Path(cfg.server.data_dir)
+        data_dir = _resolve_dir(cfg.server.data_dir)
         data_dir.mkdir(parents=True, exist_ok=True)
         app.state.session_secret = _resolve_secret(cfg.webui.secret_key, data_dir)
         app.state.login_limiter = RateLimiter()
@@ -175,12 +238,13 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """รัน server ด้วย uvicorn ตาม config (dev mode)."""
+    """รัน server ด้วย uvicorn ตาม config (dev mode / exe)."""
 
     import uvicorn
 
     args = _parse_args()
-    config = load_config(args.config)
+    cfg_path = _ensure_config(_resolve_config_path(args.config))
+    config = load_config(cfg_path)
     app = create_app(config)
     uvicorn.run(app, host=config.server.host, port=config.server.port)
 

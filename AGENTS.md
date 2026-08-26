@@ -79,6 +79,8 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - **server** ต้อง `--add-data server\webui;server/webui` (ให้ WebUI/templates/static ทำงานใน exe); **agent** รวม `shared/` อัตโนมัติ
 - dep build: `requirements-build.txt` (pillow, pyinstaller) — รายละเอียดเต็มดู `docs/BUILD.md`
 - ผลลัพธ์: `dist/monitor-server.exe` (~22.8MB) + `dist/monitor-agent.exe` (~7.1MB)
+- **ไฟล์อยู่ข้าง exe**: `config.toml` + `data/` + `logs/` ถูก resolve ไว้ข้างตัว exe (frozen) — ครั้งแรกที่รันถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin (`admin / <random>`) แล้วจัดการต่อได้ทันที
+- **service**: server exe รองรับ `--service install|start|stop|remove` (NSSM ชี้ตัว exe เอง, config/data อยู่ข้าง exe); agent exe ใช้ `scripts\install-agent.ps1` (detect exe) · Linux ใช้ systemd unit ใน `scripts/systemd` + `agent/service`
 
 ## ทดสอบ EXE (หลัง build — ต้องผ่านก่อนปิดงาน)
 - **`scripts/test_exe.bat`** / **`scripts/test_exe.ps1`** — ทดสอบ exe จริงแบบ end-to-end:

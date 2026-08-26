@@ -95,3 +95,17 @@ def test_backoff_delay():
     assert b.delay(1) == 4.0
     assert b.delay(2) == 8.0
     assert b.delay(3) == 10.0  # capped
+
+
+def test_agent_state_dir_next_to_exe(monkeypatch, tmp_path):
+    """agent exe (frozen) เก็บ state (host_id/queue) ข้าง exe."""
+
+    import sys
+
+    fake_exe = tmp_path / "monitor-agent.exe"
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+
+    from agent.agent import _default_state_dir
+
+    assert _default_state_dir() == tmp_path

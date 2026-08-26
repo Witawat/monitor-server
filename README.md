@@ -73,6 +73,8 @@ scripts\build.bat                 # ตัวหลัก — cmd ตรง
 
 - ผลลัพธ์ใน `dist/`: `monitor-server.exe` + `monitor-agent.exe` (onefile, มี icon, UPX แล้ว)
 - icon: `scripts/make_icon.py` → `build/monitor.ico` (16–256) · UPX: `scripts/tools/upx/upx.exe` (ดาวน์โหลดอัตโนมัติครั้งแรก)
+- **ไฟล์อยู่ข้าง exe**: รัน exe จากที่ไหนก็ได้ — `config.toml`/`data/`/`logs/` จะถูกสร้าง/ใช้ข้างตัว exe; ครั้งแรกถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin
+- **service**: `monitor-server.exe --service install|start|stop|remove` (NSSM) · agent ใช้ `scripts\install-agent.ps1` · Linux ใช้ systemd unit
 - ดูรายละเอียดเต็ม: `docs/BUILD.md`
 
 ## ทดสอบ EXE ที่ build

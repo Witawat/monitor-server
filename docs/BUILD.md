@@ -45,6 +45,11 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 - `monitor-server.exe` — server แบบ onefile (มี WebUI/templates/static bundled)
 - `monitor-agent.exe` — agent แบบ onefile (รวม `shared/` อัตโนมัติ)
 
+### ไฟล์ runtime อยู่ข้าง exe
+- รัน exe จากที่ไหนก็ได้ — `config.toml`/`data/`/`logs/` ถูก resolve ข้างตัว exe (ไม่ต้อง cd ไปโปรเจกต์)
+- ครั้งแรกที่รัน server exe ถ้ายังไม่มี config → สร้าง default `config.toml` ข้าง exe + พิมพ์รหัสผ่าน admin (`admin / <random>`) แล้ว login ได้เลย
+- service: `monitor-server.exe --service install|start|stop|remove` (NSSM ชี้ตัว exe เอง) · agent: `scripts\install-agent.ps1` (detect exe) · Linux: systemd unit
+
 รายละเอียด:
 - **icon**: `scripts/make_icon.py` (Pillow) วาดหน้าจอ monitor + เส้น pulse → `build/monitor.ico` (16–256) — ใช้เป็น icon ของทั้ง 2 exe
 - **UPX**: ดาวน์โหลด release ล่าสุด → `scripts/tools/upx/upx.exe` (build tool — gitignore ไม่ติด commit) แล้วบีบ exe ด้วย `--upx-dir`

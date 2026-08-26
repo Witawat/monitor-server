@@ -66,3 +66,26 @@ def test_unknown_api_404():
     with _authed_client() as client:
         resp = client.get("/api/v1/nope")
     assert resp.status_code == 404
+
+
+def test_runtime_dir_resolution(monkeypatch, tmp_path):
+    """exe (frozen) ใช้ config/data/logs ข้าง exe — แก้จัดการง่าย."""
+
+    import sys
+
+    fake_exe = tmp_path / "monitor-server.exe"
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+
+    from server.main import _resolve_config_path, _resolve_dir, _runtime_dir
+
+    assert _runtime_dir() == tmp_path
+
+    cfg = tmp_path / "config.toml"
+    cfg.write_text("", encoding="utf-8")
+    # path ที่ไม่มีจริง → fallback เจอ config ข้าง exe
+    assert _resolve_config_path(str(tmp_path / "nope.toml")) == str(cfg)
+
+    assert _resolve_dir("data") == tmp_path / "data"         # relative → ข้าง exe
+    abs_abs = tmp_path / "elsewhere"
+    assert _resolve_dir(str(abs_abs)) == abs_abs             # absolute คงเดิม
