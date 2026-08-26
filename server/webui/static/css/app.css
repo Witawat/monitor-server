@@ -156,6 +156,14 @@ td.actions .btn { margin-left: 6px; }
 .modal-overlay.show { display: flex; }
 .modal { background: var(--surface); border-radius: var(--radius); padding: 20px; width: 360px; box-shadow: var(--shadow); }
 .modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.modal-wide { width: min(620px, 92vw); max-height: 85vh; overflow-y: auto; }
+.modal-wide h2 { margin: 0 0 8px; color: var(--accent); }
+.install-note { color: var(--text-2); font-size: 0.875rem; margin: 0 0 12px; }
+.install-note code, .install-step code { background: #eef0f5; padding: 1px 5px; border-radius: 5px; }
+.install-step { color: var(--text); margin: 8px 0; font-size: 0.9rem; }
+.install-tools { margin: 8px 0; }
+.install-tools input { flex: 1; min-width: 0; }
+.install-cmd { background: #eef0f5; color: var(--text); padding: 12px; border-radius: 8px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; overflow-x: auto; margin: 8px 0 0; }
 
 /* ── login ── */
 .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }

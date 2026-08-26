@@ -82,7 +82,7 @@
         '<p>' + I18N.noHost + '</p>' +
         '<button class="btn" id="emptyInstallBtn">ดูวิธีติดตั้ง agent</button></div>';
       const b = document.getElementById('emptyInstallBtn');
-      if (b) b.onclick = () => { window.open('docs/DEPLOYMENT.md', '_blank'); };
+      if (b) b.onclick = () => { openInstallModal(); };
       return;
     }
     grid.innerHTML = list.map((h) => {
@@ -414,6 +414,42 @@
   function currentRouteId() {
     const sel = document.getElementById('hostSelect');
     return sel && sel.value ? sel.value : null;
+  }
+
+  // ── modal "วิธีติดตั้ง agent" (แสดงจากหน้าเว็บ ไม่พึ่งไฟล์ .md) ──
+  function openInstallModal() {
+    const modal = document.getElementById('installModal');
+    if (!modal) return;
+    const cmd = document.getElementById('installCmd');
+    const host = document.getElementById('installHost');
+    host.value = '';
+    const result = document.getElementById('installTokenResult');
+    result.textContent = '';
+    // base URL ที่ใช้สร้างคำสั่ง (ขึ้นกับที่ access หน้าปัจจุบัน)
+    cmd.textContent = buildInstallCmd('');
+    modal.classList.add('show');
+
+    host.oninput = () => { cmd.textContent = buildInstallCmd(host.value.trim()); };
+    document.getElementById('installGenToken').onclick = async () => {
+      const hid = host.value.trim();
+      if (!hid) { result.textContent = 'ระบุ host_id ก่อน'; return; }
+      try {
+        const res = await api('/api/v1/auth/tokens', { method: 'POST', body: JSON.stringify({ host_id: hid }) });
+        result.textContent = 'token: ' + res.token;
+        cmd.textContent = buildInstallCmd(res.token);
+      } catch (e) { result.textContent = e.message; }
+    };
+    document.getElementById('copyInstallCmd').onclick = () => {
+      navigator.clipboard.writeText(cmd.textContent).then(() => toast('success', 'คัดลอกคำสั่งแล้ว'));
+    };
+    document.getElementById('installClose').onclick = () => modal.classList.remove('show');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+  }
+
+  function buildInstallCmd(token) {
+    const url = location.origin;   // http://host:port ปัจจุบัน (ขึ้นกับวิธีเข้าถึง)
+    return 'monitor-agent.exe --install --server ' + url + ' --token ' + (token || '<TOKEN>') +
+      ' --interval 15 [--ports 80:web,443:https] [--watch nginx]';
   }
 
   window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect, renderFleetStats };

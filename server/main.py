@@ -197,6 +197,27 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
         return JSONResponse({"status": "ok", "version": __version__})
 
+    @app.get("/guide", include_in_schema=False)
+    @app.get("/guide/{name}", include_in_schema=False)
+    async def docs_page(request: Request, name: str = "") -> HTMLResponse:
+        """serve หน้าเอกสารแนะนำ — exe ตัวเดียวไม่มีไฟล์ .md, ชี้ให้ดูวิธีติดตั้งจาก WebUI.
+
+        Notes:
+            กันลิงก์ `docs/DEPLOYMENT.md` ที่เคยแชร์ไว้กลายเป็น 404 ว่างเปล่า —
+            คืนหน้าสั้น ๆ ชี้ไปที่หน้า Fleet/ตั้งค่าแทน (ไม่มี .md บน exe ตัวเดียว).
+            ใช้ path `/guide` (ไม่ใช่ `/docs` ซึ่งเป็น Swagger UI โดย default).
+        """
+        return HTMLResponse(
+            "<!doctype html><html lang=\"th\"><head><meta charset=\"utf-8\">"
+            "<title>เอกสาร — Monitor</title></head><body style=\"font-family:system-ui;padding:24px\">"
+            "<h1>เอกสาร Monitor</h1>"
+            "<p>เวอร์ชันนี้ (exe ตัวเดียว) ไม่ได้ bundle ไฟล์ <code>.md</code> — ดูวิธีติดตั้ง agent และคู่มือได้จากหน้า WebUI:</p>"
+            "<ul><li><a href=\"/#/fleet\">วิธีติดตั้ง agent (ปุ่ม \"ดูวิธีติดตั้ง agent\")</a></li>"
+            "<li><a href=\"/#/settings\">ตั้งค่า → Agent Token</a></li></ul>"
+            "<p>สคริปต์/คู่มือแบบ source: ดูใน repo <code>docs/</code> (บน GitHub).</p>"
+            "</body></html>"
+        )
+
     @app.get("/api/status")
     async def status(
         _: Annotated[str, Depends(require_admin)]

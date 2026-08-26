@@ -116,3 +116,14 @@ def test_alerts_crud_and_ack(tmp_path):
         assert c.post(f"/api/v1/alerts/history/{history_id}/ack").status_code == 200
         acked = c.get("/api/v1/alerts/history?ack=true").json()
         assert any(h["id"] == history_id and h["ack"] == 1 for h in acked)
+
+
+def test_guide_page(tmp_path):
+    """GET /guide คืนหน้าแนะนำ (.ex ไม่เปิด .md 404 ใน exe ตัวเดียว)."""
+
+    with _client(tmp_path) as c:
+        r = c.get("/guide")
+        assert r.status_code == 200
+        assert "วิธีติดตั้ง agent" in r.text
+        # /docs/{name} ที่เคย 404 → ไม่ใช่หน้าเลย; /guide เป็นตัวแทนที่แนะนำ
+        assert 'href="/#/fleet"' in r.text

@@ -44,6 +44,25 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="installModal" role="dialog" aria-modal="true">
+  <div class="modal modal-wide">
+    <h2>วิธีติดตั้ง Agent</h2>
+    <p class="install-note">ติดตั้ง <code>monitor-agent.exe</code> บนเครื่องที่ต้องการ monitor แล้วรัน (ไฟล์ config/data อยู่ข้าง exe ไม่ต้องมี Python):</p>
+    <div class="install-step"><b>1.</b> ระบุ host_id แล้วสร้าง token (แสดงครั้งเดียว) — agent จะส่งข้อมูลภายใต้ host นี้</div>
+    <div class="toolbar install-tools">
+      <input id="installHost" placeholder="host_id เช่น web-01" aria-label="host_id">
+      <button class="btn primary" id="installGenToken">สร้าง token</button>
+      <span id="installTokenResult"></span>
+    </div>
+    <div class="install-step"><b>2.</b> คัดลอกคำสั่ง แล้วรันบนเครื่องเป้าหมาย (Windows — Linux ใช้ <code>./monitor-agent</code>)</div>
+    <pre class="install-cmd" id="installCmd">monitor-agent.exe --install --server http://127.0.0.1:18080 --token &lt;TOKEN&gt; --interval 15 [--ports 80:web,443:https] [--watch nginx]</pre>
+    <div class="actions">
+      <button class="btn" id="copyInstallCmd">คัดลอกคำสั่ง</button>
+      <button class="btn" id="installClose">ปิด</button>
+    </div>
+  </div>
+</div>
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script src="/static/js/chart.umd.min.js"></script>
