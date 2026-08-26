@@ -318,7 +318,10 @@
 
   function showResult(el, ok, text) {
     const r = document.getElementById(el);
-    if (r) { r.textContent = text; r.className = 'notif-result ' + (ok ? 'result-ok' : 'result-err'); }
+    if (r) {
+      r.textContent = text;
+      r.className = 'notif-result' + (ok === null ? '' : (ok ? ' result-ok' : ' result-err'));
+    }
   }
 
   async function testWebhook() {

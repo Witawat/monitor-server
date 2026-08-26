@@ -24,8 +24,18 @@ def _channel_fields(channel: str) -> tuple[str, ...]:
     return _WEBHOOK_FIELDS if channel == "webhook" else _TELEGRAM_FIELDS
 
 
+def _as_bool(value: Any) -> bool:
+    """แปลงค่าเป็น bool อย่างปลอดภัย (รับ bool/int/str 'true'/'false')."""
+
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
 async def _read_db(db: Database) -> dict[str, dict[str, Any]]:
-    """อ่านค่า notifier จาก DB ({} ถ้ายังไม่เคยตั้ง)."""
+    """อ่านค่า notifier จาก DB ({} ถ้ายังไม่เคยตั้ง) + กรองให้เป็น dict ต่อช่อง."""
 
     raw = await db.kv_get(SETTINGS_KEY)
     if not raw:
@@ -34,7 +44,14 @@ async def _read_db(db: Database) -> dict[str, dict[str, Any]]:
         data = json.loads(raw)
     except json.JSONDecodeError:
         return {}
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    cleaned: dict[str, dict[str, Any]] = {}
+    for ch in ("webhook", "telegram"):
+        chv = data.get(ch)
+        if isinstance(chv, dict):
+            cleaned[ch] = chv
+    return cleaned
 
 
 def _default_enabled(channel: str, merged: dict[str, Any]) -> bool:
@@ -59,8 +76,10 @@ async def load_notifiers(db: Database | None, base: NotifierConfig) -> NotifierC
         db_ch = raw.get(ch) or {}
         merged = dict(base_ch)
         for k in fields:
-            if k in db_ch:
-                merged[k] = db_ch[k]
+            if k not in db_ch:
+                continue
+            v = db_ch[k]
+            merged[k] = _as_bool(v) if k == "enabled" else v
         if "enabled" not in merged:
             merged["enabled"] = _default_enabled(ch, merged)
         channels[ch] = merged
@@ -80,7 +99,7 @@ async def merge_notifiers(db: Database, data: dict[str, Any]) -> dict[str, dict[
             if k not in incoming:
                 continue
             v = incoming[k]
-            cur[k] = v if isinstance(v, bool) else str(v or "")
+            cur[k] = _as_bool(v) if k == "enabled" else str(v or "")
         current[ch] = cur
     return current
 

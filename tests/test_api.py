@@ -7,6 +7,7 @@ import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -298,3 +299,75 @@ def test_telegram_scan_chatid(tmp_path, monkeypatch):
         assert body["chat_id"] == "-100123456789"
         assert "getUpdates" in captured["url"]
         assert captured["params"]["offset"] == -1
+
+
+def test_notifier_enabled_string_false(tmp_path):
+    """enabled ส่งเป็น string 'false' → ต้องปิดจริง (กัน truthy บั๊ก)."""
+
+    with _client(tmp_path) as c:
+        c.put(
+            "/api/v1/settings/notifiers",
+            json={"webhook": {"url": "https://h.example/x", "enabled": "false"}},
+        )
+        got = c.get("/api/v1/settings/notifiers").json()
+        assert got["webhook"]["enabled"] is False
+
+
+def test_telegram_test_network_error(tmp_path, monkeypatch):
+    """test telegram: server ไร้เน็ต/เชื่อมต่อไม่ได้ → คืน ok:false (ไม่ 500)."""
+
+    class _FakeAC:
+        def __init__(self, *a, **k):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):  # noqa: ANN002
+            return False
+
+        async def get(self, url, **kw):
+            raise httpx.ConnectError("boom")
+
+        async def post(self, *a, **k):  # noqa: ANN002, ANN003
+            raise AssertionError("ไม่ควรเรียก post เมื่อ getMe พัง")
+
+    monkeypatch.setattr("httpx.AsyncClient", _FakeAC)
+    with _client(tmp_path) as c:
+        r = c.post(
+            "/api/v1/settings/notifiers/telegram/test",
+            json={"bot_token": "1:AAA", "chat_id": "-100"},
+        )
+        assert r.status_code == 200
+        assert r.json()["ok"] is False
+
+
+def test_telegram_scan_chatid_nonjson(tmp_path, monkeypatch):
+    """chatid: response 200 แต่ body ไม่ใช่ JSON → คืน ok:false (ไม่ 500)."""
+
+    class _BadResp:
+        status_code = 200
+        text = "<html>bad gateway</html>"
+        headers = {"content-type": "text/html"}
+
+        def json(self):
+            raise ValueError("no json")
+
+    class _FakeAC:
+        def __init__(self, *a, **k):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):  # noqa: ANN002
+            return False
+
+        async def get(self, url, **kw):
+            return _BadResp()
+
+    monkeypatch.setattr("httpx.AsyncClient", _FakeAC)
+    with _client(tmp_path) as c:
+        r = c.post("/api/v1/settings/notifiers/telegram/chatid", json={"bot_token": "1:AAA"})
+        assert r.status_code == 200
+        assert r.json()["ok"] is False
