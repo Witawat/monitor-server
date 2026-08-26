@@ -64,7 +64,7 @@ class AlertEngine:
 
         self._db = db
         self._config = config
-        self._notifier = notifier or Notifier(config.alerting.notifiers)
+        self._notifier = notifier or Notifier(config.alerting.notifiers, db)
         self._state: dict[tuple[int, str], tuple[str, int]] = {}
 
     async def evaluate(self, snapshots: list[Snapshot], now: int | None = None) -> list[dict[str, Any]]:

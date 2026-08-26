@@ -24,6 +24,7 @@ from server.api.deps import SESSION_COOKIE, require_admin
 from server.api.hosts import router as hosts_router
 from server.api.ingest import router as ingest_router
 from server.api.metrics import router as metrics_router
+from server.api.settings import router as settings_router
 from server.config import AppConfig, load_config
 from server.ingest import IngestService, RateLimiter
 from server.maintenance import RetentionWorker, RollupWorker
@@ -175,6 +176,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.include_router(metrics_router)
     app.include_router(auth_router)
     app.include_router(alerts_router)
+    app.include_router(settings_router)
 
     static_dir = _BASE_DIR / "webui" / "static"
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

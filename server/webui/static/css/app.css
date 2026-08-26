@@ -286,3 +286,35 @@ select { appearance: auto; }
 /* ── accessibility (WEBUI_DESIGN.md §12) ── */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ── การแจ้งเตือน (Webhook / Telegram) — WEBUI_DESIGN.md §5.5 ── */
+.hint { color: var(--text-2); font-size: 0.85rem; margin: 4px 0 8px; line-height: 1.45; }
+.field-label { display: block; font-size: 0.8rem; color: var(--text-2); margin: 10px 0 4px; }
+.notif-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 8px; }
+.notif-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.notif-card.flash { animation: notifFlash 1.2s ease-out; }
+@keyframes notifFlash {
+  0% { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); border-color: var(--accent); }
+  100% { background: var(--surface); }
+}
+.notif-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.notif-head strong { font-size: 1rem; }
+.notif-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.notif-row input { flex: 1; }
+.notif-row .spacer { flex: 1; }
+.notif-result { font-size: 0.82rem; margin: 8px 0 0; min-height: 1em; word-break: break-word; }
+.result-ok { color: var(--success); }
+.result-err { color: var(--danger); }
+.secret-wrap { position: relative; flex: 1; display: flex; }
+.secret-wrap input { flex: 1; padding-right: 48px; }
+.eye-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-2); cursor: pointer; font-size: 0.75rem; padding: 4px 6px; }
+.link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.82rem; padding: 0; text-decoration: underline; }
+.helper-box { background: var(--surface-2, #0f1622); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; margin: 6px 0; }
+.helper-box ol { margin: 0; padding-left: 18px; line-height: 1.7; }
+.helper-box code { font-size: 0.78rem; }
+.wiz-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 14px 0; }
+.wiz-opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; background: var(--surface-2, #0f1622); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font: inherit; color: inherit; }
+.wiz-opt:hover { border-color: var(--accent); }
+.wiz-opt b { font-size: 1rem; }
+.wiz-opt small { color: var(--text-2); line-height: 1.4; }
+.check small.ch { color: var(--warn); }

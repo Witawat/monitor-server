@@ -7,6 +7,9 @@
 ## [Unreleased]
 
 ### เพิ่ม
+- **ตั้งค่า Webhook / Telegram ผ่าน WebUI** (หน้า ตั้งค่า → การแจ้งเตือน): การ์ด 2 ช่องทาง + ปุ่มทดสอบ (webhook POST จริง / telegram ส่งข้อความทดสอบ) + toggle เปิด/ปิด + badge สถานะ + ตัวช่วยหา Bot Token/Chat ID — เก็บใน DB (`state_kv`), มีผลทันทีไม่ต้อง restart, config.toml เดิมเป็นค่าเริ่มต้น (fallback)
+- **Wizard ตั้งค่าการแจ้งเตือนครั้งแรก**: ยังไม่ตั้งค่าช่องใด → modal เลือกช่องทาง แล้วพาไปกรอกค่าทีละขั้น (scroll + highlight + focus)
+- หน้า Alerts: checkbox webhook/telegram ต่อกฎ แสดง hint "(ยังไม่ได้ตั้งค่า)" ถ้าช่องนั้นยังไม่ตั้งค่า
 - WebUI เป็นหน้าเดียวเลื่อนยาว (long page) — ไม่มี sidebar, เมนูนำทาง (Fleet/Alerts/ตั้งค่า) เป็น topnav แนวนอนใน topbar, คลิกการ์ด → เลือก host + scroll ไป section Host
 - **ปุ่ม "แก้ไขค่า Host"**: modal แก้ hostname/tags + remote config (interval/watch/ports/max_batch) ที่ agent จะ pull ไปใช้ในรอบถัดไป (ไม่ต้อง restart) + ลบ host แบบ confirm
 - **Remote config (agent)**: server เก็บ desired_config ต่อ host (DB) + คืนให้ agent ผ่าน ingest response → agent เปลี่ยน interval/watch/ports/max_batch แบบ live โดยไม่ restart (ตามที่ตั้งใน WebUI)

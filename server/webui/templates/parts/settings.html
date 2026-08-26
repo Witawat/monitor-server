@@ -12,4 +12,83 @@
     <button class="btn primary" id="genTokenBtn">สร้าง token</button>
     <span id="newTokenResult"></span>
   </div>
+
+  <h3 style="color:var(--text-2);margin:24px 0 8px">การแจ้งเตือน (Webhook / Telegram)</h3>
+  <p class="hint">ตั้งค่าช่องทางรับการแจ้งเตือน alert — บันทึกแล้วมีผลทันที (ไม่ต้อง restart server)</p>
+  <div class="notif-grid">
+    <div class="notif-card" id="webhookCard">
+      <div class="notif-head">
+        <strong>Webhook</strong>
+        <span class="badge" id="webhookBadge">—</span>
+      </div>
+      <p class="hint">POST JSON เมื่อ alert trigger (ใช้กับ Slack / Teams / บริการอื่น)</p>
+      <label class="field-label" for="webhookUrl">Webhook URL</label>
+      <div class="notif-row">
+        <input id="webhookUrl" type="url" placeholder="https://hooks.example.com/xxx" autocomplete="off">
+        <button class="btn" id="webhookTestBtn">ทดสอบ</button>
+      </div>
+      <div class="notif-row">
+        <label class="check"><input type="checkbox" id="webhookEnabled"> เปิดใช้งาน</label>
+        <span class="spacer"></span>
+        <button class="btn primary" id="webhookSaveBtn">บันทึก</button>
+      </div>
+      <p class="notif-result" id="webhookResult"></p>
+    </div>
+
+    <div class="notif-card" id="telegramCard">
+      <div class="notif-head">
+        <strong>Telegram</strong>
+        <span class="badge" id="telegramBadge">—</span>
+      </div>
+      <p class="hint">ส่งข้อความตรงถึงบอทของคุณเมื่อ alert trigger</p>
+      <label class="field-label" for="telegramToken">Bot Token</label>
+      <div class="notif-row">
+        <div class="secret-wrap">
+          <input id="telegramToken" type="password" placeholder="123456:ABC-..." autocomplete="off">
+          <button type="button" class="eye-btn" id="telegramTokenEye">แสดง</button>
+        </div>
+      </div>
+      <label class="field-label" for="telegramChat">Chat ID</label>
+      <div class="notif-row">
+        <input id="telegramChat" type="text" placeholder="-100123456789" autocomplete="off">
+        <button class="btn" id="telegramTestBtn">ทดสอบส่งข้อความ</button>
+      </div>
+      <p class="hint"><button type="button" class="link-btn" id="tgHelpToggle">วิธีหา Bot Token / Chat ID</button></p>
+      <div class="helper-box" id="tgHelp" style="display:none">
+        <ol>
+          <li>ใน Telegram ค้นหา <code>@BotFather</code> → สร้างบอทด้วย <code>/newbot</code> → ได้ <b>Bot Token</b></li>
+          <li>แชทกับบอทของคุณ (กด Start) เพื่อสร้าง chat</li>
+          <li>หา <b>Chat ID</b>: ส่งข้อความไปบอท แล้วเปิด
+            <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> ในเบราว์เซอร์
+            → อ่านค่า <code>"chat":{"id": ...</code> (ห้องกลุ่มให้ติดเครื่องหมายลบ เช่น <code>-100123456789</code>)</li>
+        </ol>
+      </div>
+      <div class="notif-row">
+        <label class="check"><input type="checkbox" id="telegramEnabled"> เปิดใช้งาน</label>
+        <span class="spacer"></span>
+        <button class="btn primary" id="telegramSaveBtn">บันทึก</button>
+      </div>
+      <p class="notif-result" id="telegramResult"></p>
+    </div>
+  </div>
 </section>
+
+<div class="modal-overlay" id="notifWizard" role="dialog" aria-modal="true">
+  <div class="modal modal-wide">
+    <h2>ตั้งค่าการแจ้งเตือน</h2>
+    <p class="hint">ยังไม่มีการตั้งค่าช่องทางแจ้งเตือน — เลือกช่องทางที่ต้องการ แล้วเราจะพาไปกรอกค่าทีละขั้น</p>
+    <div class="wiz-options">
+      <button type="button" class="wiz-opt" data-wiz="webhook">
+        <b>Webhook</b>
+        <small>POST JSON ไป URL ของคุณ (Slack / Teams / บริการอื่น)</small>
+      </button>
+      <button type="button" class="wiz-opt" data-wiz="telegram">
+        <b>Telegram</b>
+        <small>ส่งข้อความตรงถึงบอทของคุณ</small>
+      </button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="wizClose">ปิด</button>
+    </div>
+  </div>
+</div>

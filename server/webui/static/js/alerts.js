@@ -201,7 +201,173 @@
           loadSettings();
         } catch (e) { toast('error', e.message); }
       };
+      await loadNotifiers();
     } catch (e) { toast('error', e.message); }
+  }
+
+  // ── การแจ้งเตือน (Webhook / Telegram) — ตั้งค่าผ่าน UI, เก็บใน DB ──
+
+  async function loadNotifiers() {
+    try {
+      const data = await api('/api/v1/settings/notifiers');
+      renderNotifierState(data);
+      wireNotifierHandlers(data);
+      maybeShowWizard(data);
+    } catch (e) { toast('error', e.message); }
+  }
+
+  function renderNotifierState(d) {
+    const setBadge = (id, text, cls) => {
+      const b = document.getElementById(id);
+      if (b) { b.textContent = text; b.className = 'badge' + (cls ? ' ' + cls : ''); }
+    };
+    const wh = d.webhook || {};
+    const tg = d.telegram || {};
+    if (wh.configured) setBadge('webhookBadge', wh.enabled ? 'พร้อมใช้งาน' : 'ปิดใช้งาน', wh.enabled ? 'online' : 'offline');
+    else setBadge('webhookBadge', 'ยังไม่ได้ตั้งค่า', 'warn');
+    if (tg.configured) setBadge('telegramBadge', tg.enabled ? 'พร้อมใช้งาน' : 'ปิดใช้งาน', tg.enabled ? 'online' : 'offline');
+    else setBadge('telegramBadge', 'ยังไม่ได้ตั้งค่า', 'warn');
+
+    const url = document.getElementById('webhookUrl');
+    if (url && url.value !== (wh.url || '')) url.value = wh.url || '';
+    const en = document.getElementById('webhookEnabled');
+    if (en) en.checked = !!wh.enabled || !wh.configured;  // ช่องใหม่ default เปิดใช้งาน
+    const tok = document.getElementById('telegramToken');
+    if (tok && tok.value !== (tg.bot_token || '')) tok.value = tg.bot_token || '';
+    const chat = document.getElementById('telegramChat');
+    if (chat && chat.value !== (tg.chat_id || '')) chat.value = tg.chat_id || '';
+    const te = document.getElementById('telegramEnabled');
+    if (te) te.checked = !!tg.enabled || !tg.configured;  // ช่องใหม่ default เปิดใช้งาน
+    updateRuleFormHints(wh.configured, tg.configured);
+  }
+
+  function updateRuleFormHints(whOk, tgOk) {
+    const hint = (id, ok) => {
+      const cb = document.getElementById(id);
+      const lab = cb && cb.closest('label');
+      if (!lab) return;
+      lab.querySelectorAll('small.ch').forEach((s) => s.remove());
+      if (!ok) {
+        const s = document.createElement('small');
+        s.className = 'ch';
+        s.textContent = ' (ยังไม่ได้ตั้งค่า)';
+        lab.appendChild(s);
+      }
+    };
+    hint('ruleNotifyWebhook', whOk);
+    hint('ruleNotifyTelegram', tgOk);
+  }
+
+  function wireNotifierHandlers() {
+    if (document.getElementById('webhookSaveBtn').onclick) return;  // wire ครั้งเดียว (DOM คงเดิม)
+    document.getElementById('webhookSaveBtn').onclick = saveChannel('webhook');
+    document.getElementById('webhookTestBtn').onclick = testWebhook;
+    document.getElementById('telegramSaveBtn').onclick = saveChannel('telegram');
+    document.getElementById('telegramTestBtn').onclick = testTelegram;
+    const eye = document.getElementById('telegramTokenEye');
+    eye.onclick = () => {
+      const inp = document.getElementById('telegramToken');
+      const show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      eye.textContent = show ? 'ซ่อน' : 'แสดง';
+    };
+    document.getElementById('tgHelpToggle').onclick = () => {
+      const h = document.getElementById('tgHelp');
+      h.style.display = h.style.display === 'none' ? 'block' : 'none';
+    };
+    document.querySelectorAll('#notifWizard .wiz-opt').forEach((b) => {
+      b.onclick = () => focusChannel(b.dataset.wiz);
+    });
+    document.getElementById('wizClose').onclick = () => hideWizard();
+  }
+
+  function collectChannel(ch) {
+    if (ch === 'webhook') {
+      return {
+        url: document.getElementById('webhookUrl').value.trim(),
+        enabled: document.getElementById('webhookEnabled').checked,
+      };
+    }
+    return {
+      bot_token: document.getElementById('telegramToken').value.trim(),
+      chat_id: document.getElementById('telegramChat').value.trim(),
+      enabled: document.getElementById('telegramEnabled').checked,
+    };
+  }
+
+  function saveChannel(ch) {
+    return async () => {
+      const body = {};
+      body[ch] = collectChannel(ch);
+      try {
+        const data = await api('/api/v1/settings/notifiers', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        });
+        renderNotifierState(data);
+        toast('success', I18N.saved);
+      } catch (e) { toast('error', e.message); }
+    };
+  }
+
+  function showResult(el, ok, text) {
+    const r = document.getElementById(el);
+    if (r) { r.textContent = text; r.className = 'notif-result ' + (ok ? 'result-ok' : 'result-err'); }
+  }
+
+  async function testWebhook() {
+    const url = document.getElementById('webhookUrl').value.trim();
+    if (!url) { toast('error', 'กรอก Webhook URL ก่อน'); return; }
+    showResult('webhookResult', null, 'กำลังทดสอบ…');
+    try {
+      const r = await api('/api/v1/settings/notifiers/webhook/test', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      });
+      showResult(
+        'webhookResult',
+        r.ok,
+        r.ok ? ('OK (' + r.status + ') — ' + (r.detail || '')) : ('ล้มเหลว (' + (r.status || '-') + ') ' + (r.detail || ''))
+      );
+    } catch (e) { showResult('webhookResult', false, e.message); }
+  }
+
+  async function testTelegram() {
+    const bot_token = document.getElementById('telegramToken').value.trim();
+    const chat_id = document.getElementById('telegramChat').value.trim();
+    if (!bot_token || !chat_id) { toast('error', 'กรอก Bot Token และ Chat ID ก่อน'); return; }
+    showResult('telegramResult', null, 'กำลังส่ง…');
+    try {
+      const r = await api('/api/v1/settings/notifiers/telegram/test', {
+        method: 'POST',
+        body: JSON.stringify({ bot_token, chat_id }),
+      });
+      showResult('telegramResult', r.ok, r.ok ? 'ส่งข้อความทดสอบแล้ว' : (r.detail || 'ล้มเหลว'));
+    } catch (e) { showResult('telegramResult', false, e.message); }
+  }
+
+  function maybeShowWizard(d) {
+    const bothUnset = !(d.webhook || {}).configured && !(d.telegram || {}).configured;
+    const done = sessionStorage.getItem('notifWizDone') === '1';
+    if (bothUnset && !done) showWizard();
+  }
+
+  function showWizard() { document.getElementById('notifWizard').classList.add('show'); }
+  function hideWizard() {
+    document.getElementById('notifWizard').classList.remove('show');
+    sessionStorage.setItem('notifWizDone', '1');
+  }
+
+  function focusChannel(ch) {
+    hideWizard();
+    const card = document.getElementById(ch + 'Card');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.remove('flash');
+    void card.offsetWidth;  // รีสตาร์ท animation ให้ flash ซ้ำได้
+    card.classList.add('flash');
+    const first = card.querySelector('input');
+    if (first) setTimeout(() => first.focus(), 350);
   }
 
   window.AlertsView = { loadAlerts, loadSettings };

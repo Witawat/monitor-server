@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -74,8 +74,8 @@ class RuleConfig(BaseModel):
 class NotifierConfig(BaseModel):
     """Notifier webhook + telegram (url/token/chat)."""
 
-    webhook: dict[str, str] = Field(default_factory=dict)
-    telegram: dict[str, str] = Field(default_factory=dict)
+    webhook: dict[str, Any] = Field(default_factory=dict)
+    telegram: dict[str, Any] = Field(default_factory=dict)
 
 
 class AlertingConfig(BaseModel):

@@ -2,15 +2,50 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import pytest
 from fastapi.testclient import TestClient
 
 from server.config import AppConfig
 from server.main import create_app
 from server.webui.auth import hash_password, sign_session
 from shared.metric import HEADER_TOKEN
+
+
+class _FakeWebhookHandler(BaseHTTPRequestHandler):
+    """fake webhook รับ POST สำหรับทดสอบ endpoint /test."""
+
+    received: list[bytes] = []
+
+    def log_message(self, *args):  # noqa: ANN002
+        pass
+
+    def do_POST(self):  # noqa: N802
+        length = int(self.headers.get("Content-Length", 0))
+        self.__class__.received.append(self.rfile.read(length))
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"{}")
+
+
+@pytest.fixture
+def webhook_server():
+    """fake webhook server ใน thread."""
+
+    _FakeWebhookHandler.received = []
+    server = HTTPServer(("127.0.0.1", 0), _FakeWebhookHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/hook"
+    try:
+        yield url
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
 
 
 def _batch() -> list[dict]:
@@ -162,3 +197,66 @@ def test_remote_config_roundtrip(tmp_path):
         # เปลี่ยน hostname ผ่าน config ด้วย
         assert c.put("/api/v1/hosts/h1/config", json={"hostname": "web-prod"}).status_code == 200
         assert c.get("/api/v1/hosts/h1").json()["hostname"] == "web-prod"
+
+
+def test_notifier_settings_roundtrip(tmp_path):
+    """ตั้งค่า webhook/telegram ผ่าน API แล้วอ่านกลับ."""
+
+    with _client(tmp_path) as c:
+        r = c.put(
+            "/api/v1/settings/notifiers",
+            json={"webhook": {"url": "https://h.example/x", "enabled": True}},
+        )
+        assert r.status_code == 200
+        got = r.json()
+        assert got["webhook"]["url"] == "https://h.example/x"
+        assert got["webhook"]["configured"] is True
+        assert got["webhook"]["enabled"] is True
+
+        r2 = c.put(
+            "/api/v1/settings/notifiers",
+            json={"telegram": {"bot_token": "1:AAA", "chat_id": "-100", "enabled": True}},
+        )
+        assert r2.status_code == 200
+        assert r2.json()["telegram"]["configured"] is True
+
+
+def test_notifier_settings_enabled_requires_values(tmp_path):
+    """เปิดช่องทางแต่ค่าจำเป็นไม่ครบ → 400 + ไม่บันทึก."""
+
+    with _client(tmp_path) as c:
+        assert c.put("/api/v1/settings/notifiers", json={"webhook": {"url": "", "enabled": True}}).status_code == 400
+        assert c.put(
+            "/api/v1/settings/notifiers",
+            json={"telegram": {"bot_token": "", "chat_id": "", "enabled": True}},
+        ).status_code == 400
+        got = c.get("/api/v1/settings/notifiers").json()
+        assert got["webhook"]["configured"] is False
+        assert got["telegram"]["configured"] is False
+
+
+def test_notifier_settings_disable_keeps_values(tmp_path):
+    """ปิด enabled → ค่าที่ตั้งยังอยู่ (แค่ปิดช่องทาง)."""
+
+    with _client(tmp_path) as c:
+        c.put("/api/v1/settings/notifiers", json={"webhook": {"url": "https://h.example/x", "enabled": True}})
+        r = c.put("/api/v1/settings/notifiers", json={"webhook": {"enabled": False}})
+        assert r.json()["webhook"]["enabled"] is False
+        assert r.json()["webhook"]["url"] == "https://h.example/x"
+
+
+def test_notifier_webhook_test_endpoint(webhook_server, tmp_path):
+    """POST /test ไป fake webhook → ok + มี payload ถูกส่ง."""
+
+    with _client(tmp_path) as c:
+        r = c.post("/api/v1/settings/notifiers/webhook/test", json={"url": webhook_server})
+        assert r.json()["ok"] is True
+        assert len(_FakeWebhookHandler.received) == 1
+        assert b"test" in _FakeWebhookHandler.received[0]
+
+
+def test_notifier_webhook_test_requires_url(tmp_path):
+    """/test ไม่มี url → 400."""
+
+    with _client(tmp_path) as c:
+        assert c.post("/api/v1/settings/notifiers/webhook/test", json={"url": ""}).status_code == 400

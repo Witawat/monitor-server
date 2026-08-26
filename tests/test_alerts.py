@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
+from server.alerting import settings as notifier_settings
 from server.alerting.engine import AlertEngine, metric_value, parse_duration
 from server.alerting.notify import Notifier
 from server.config import AppConfig, NotifierConfig
@@ -158,6 +159,40 @@ async def test_notifier_webhook(webhook_server):
     assert "webhook" in sent
     assert len(_WebhookHandler.received) == 1
     assert _WebhookHandler.received[0]["metric"] == "cpu_percent"
+
+
+async def test_load_notifiers_db_overrides_config(db):
+    """ค่า notifier จาก DB (ตั้งผ่าน UI) เหนือกว่า config.toml."""
+
+    base = NotifierConfig(
+        webhook={"url": "http://toml.local/hook"},
+        telegram={"bot_token": "B", "chat_id": "C"},
+    )
+    await notifier_settings.save_merged(db, {"webhook": {"url": "http://db.local/hook", "enabled": True}})
+    got = await notifier_settings.load_notifiers(db, base)
+    assert got.webhook["url"] == "http://db.local/hook"
+    assert got.webhook["enabled"] is True
+    # ไม่มี DB → ใช้ config ตรง ๆ (fallback)
+    got2 = await notifier_settings.load_notifiers(None, base)
+    assert got2.webhook["url"] == "http://toml.local/hook"
+    assert got2.telegram["bot_token"] == "B"
+
+
+async def test_notifier_respects_enabled(db, webhook_server):
+    """ช่องที่ปิดใช้งาน (enabled=false) → ไม่ส่งแม้มีค่า URL ครบ."""
+
+    _WebhookHandler.received = []
+    base = NotifierConfig(webhook={"url": webhook_server})
+    await notifier_settings.save_merged(db, {"webhook": {"url": webhook_server, "enabled": False}})
+    n = Notifier(base, db)
+    sent = await n.send({}, channels=["webhook"])
+    assert sent == []
+    assert _WebhookHandler.received == []
+    # เปิด → ส่ง
+    await notifier_settings.save_merged(db, {"webhook": {"enabled": True}})
+    sent = await n.send({}, channels=["webhook"])
+    assert sent == ["webhook"]
+    assert len(_WebhookHandler.received) == 1
 
 
 async def test_ack_history(db):

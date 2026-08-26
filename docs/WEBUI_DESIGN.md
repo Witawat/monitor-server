@@ -219,15 +219,25 @@ setScale();
 ```
 ┌──────────────────────────────────────────────────┐
 │ ตั้งค่า                                            │
-│  Agent Token     [table: host_id | token | revoke]│
-│  Alert Rules     [table: name | metric | op | thr]│
-│  Retention       [45d] [1m/5m/1h/1d]  [บันทึก]      │
-│  WebUI           [user/pass/secret]               │
+│ ข้อมูล Server    [info-grid: version/host:port/...]│
+│ Agent Token     [table: host_id | token | revoke] │
+│                 [input host_id] [สร้าง token]      │
+│ การแจ้งเตือน (Webhook / Telegram)                  │
+│ ┌────────────────────┐ ┌────────────────────┐     │
+│ │ Webhook [badge]    │ │ Telegram [badge]   │     │
+│ │ URL [____][ทดสอบ]  │ │ token [••••][แสดง] │     │
+│ │ ☑เปิดใช้งาน [บันทึก]│ │ chat [____][ทดสอบ] │     │
+│ │                    │ │ ▶วิธีหา token/chat  │     │
+│ └────────────────────┘ └────────────────────┘     │
 └──────────────────────────────────────────────────┘
 ```
-- token: gen/revoke ต่อ host (ตาราง)
-- เปลี่ยนแล้ว `POST` → เขียน config.toml + ใช้ทันที
-- alert rule form: Host เป็น dropdown (— ทุก host — + รายชื่อ host จริง), Metric ตรงกับรายการที่ alert engine รองรับ (cpu_percent/memory.percent/used/total/swap.used/total/load1/5/15/disk.percent/uptime/procs)
+- 3 ส่วน: ข้อมูล Server (read-only) / Agent Token (gen/revoke) / **การแจ้งเตือน** (Webhook + Telegram)
+- **การแจ้งเตือน**: การ์ด 2 ช่องทาง (`.notif-card` grid responsive) — ฟิลด์ค่า + ปุ่ม **ทดสอบ** (POST จริง) + toggle **เปิดใช้งาน** + ปุ่ม **บันทึก**; badge สถานะ (`พร้อมใช้งาน`/`ปิดใช้งาน`/`ยังไม่ได้ตั้งค่า`)
+- ค่าถูกเก็บใน DB (`state_kv["notifiers"]`) — บันทึกแล้ว **มีผลทันที ไม่ต้อง restart**; config.toml เดิมเป็นค่าเริ่มต้น (fallback)
+- Telegram: bot_token เป็น password field + ปุ่มแสดง/ซ่อน; ตัวช่วย "วิธีหา Bot Token / Chat ID" (collapsible); ปุ่มทดสอบ = getMe + sendMessage จริง
+- **Wizard ครั้งแรก**: ยังไม่ตั้งค่าช่องใดเลย → modal เลือกช่องทาง (Webhook/Telegram) → ปิด + scroll/focus ไปการ์ดนั้น (flash highlight); เปิดครั้งเดียวต่อ session (sessionStorage)
+- หน้า Alerts: checkbox webhook/telegram ต่อกฎ จะมี hint `(ยังไม่ได้ตั้งค่า)` ถ้าช่องนั้นยังไม่ได้ตั้งค่า
+- API: `GET/PUT /api/v1/settings/notifiers` + `POST .../webhook/test`, `.../telegram/test`
 
 ---
 

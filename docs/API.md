@@ -68,6 +68,22 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 ### `GET /api/v1/alerts/history` — ประวัติ trigger (filter `?host_id=&rule_id=&ack=false`)
 ### `POST /api/v1/alerts/history/{id}/ack` *(admin)* — acknowledge
 
+## Settings
+### `GET /api/v1/settings/notifiers` *(admin)*
+- คืนค่า notifier (webhook/telegram) ที่ตั้งผ่าน UI + สถานะ: `{"webhook":{"url","enabled","configured"},"telegram":{"bot_token","chat_id","enabled","configured"}}`
+- merge: ค่าใน DB (ตั้งผ่าน UI) เหนือกว่า `config.toml` (fallback)
+
+### `PUT /api/v1/settings/notifiers` *(admin)*
+- บันทึกค่า notifier ต่อช่อง: `{"webhook":{"url":"...","enabled":true}}` หรือ `{"telegram":{"bot_token":"...","chat_id":"...","enabled":true}}`
+- ส่งเฉพาะ field ที่ต้องการเปลี่ยน (เช่น ปิดช่องทาง `{"webhook":{"enabled":false}}` — ค่าที่ตั้งไว้ยังอยู่)
+- check: ช่องที่ `enabled:true` ต้องมีค่าจำเป็นครบ (webhook: url; telegram: bot_token+chat_id) → ไม่งั้น `400`
+
+### `POST /api/v1/settings/notifiers/webhook/test` *(admin)*
+- body `{"url":"..."}` → POST payload ตัวอย่าง → `{"ok":bool,"status":int,"detail":str}` (ยังไม่บันทึก)
+
+### `POST /api/v1/settings/notifiers/telegram/test` *(admin)*
+- body `{"bot_token":"...","chat_id":"..."}` → ตรวจ getMe + ส่งข้อความทดสอบ → `{"ok":bool,"status":int,"detail":str}` (ยังไม่บันทึก)
+
 ## Auth (WebUI)
 ### `POST /api/v1/auth/login`
 - Body: `{"username","password"}` → set HttpOnly cookie, `200 {"ok":true}`

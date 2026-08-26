@@ -37,10 +37,12 @@ enabled = true
 
 [alerting.notifiers.webhook]
 url = ""                       # POST JSON เมื่อ trigger
+                               # หมายเหตุ: ตั้งผ่าน WebUI (หน้า ตั้งค่า → การแจ้งเตือน) ได้ — ค่าที่ตั้งใน UI เก็บใน DB และเหนือกว่าค่านี้
 
 [alerting.notifiers.telegram]
 bot_token = ""
 chat_id = ""
+                               # หมายเหตุ: เช่นเดียวกับ webhook — ตั้งผ่าน UI ได้โดยไม่ต้อง restart
 
 [[alerting.rules]]             # array of table — แต่ละ rule 1 บล็อก
 name = "CPU สูง"
