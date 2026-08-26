@@ -4,12 +4,16 @@
     <h2 id="hostTitle">Host</h2>
     <span class="badge online" id="hostBadge"></span>
     <span style="flex:1"></span>
+    <input id="tagInput" placeholder="tags (คั่น ,)" aria-label="tags" style="width:180px;padding:6px 10px;border:1px solid var(--border);border-radius:8px">
+    <button class="btn" id="saveTagsBtn">ตั้ง tags</button>
+    <a class="btn" id="exportBtn" href="#" download>export CSV</a>
     <button class="pill active" data-range="1h">1h</button>
     <button class="pill" data-range="6h">6h</button>
     <button class="pill" data-range="1d">1d</button>
     <button class="pill" data-range="7d">7d</button>
   </div>
   <div class="kpi-row" id="kpiRow"></div>
+  <div id="servicesRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
   <div class="chart-card">
     <div class="chart-wrap"><canvas id="metricChart"></canvas></div>
   </div>

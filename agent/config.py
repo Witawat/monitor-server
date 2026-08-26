@@ -16,6 +16,7 @@ class AgentConfig:
     server_url: str
     token: str
     interval: int = 15
+    watch: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """validate ค่า config ตอนสร้าง."""
@@ -41,8 +42,15 @@ def load_config(argv: list[str] | None = None) -> AgentConfig:
     parser.add_argument("--server", default=_env("SERVER_URL") or None, help="URL ของ server เช่น http://127.0.0.1:18080")
     parser.add_argument("--token", default=_env("TOKEN") or None, help="agent token")
     parser.add_argument("--interval", type=int, default=int(_env("INTERVAL") or 15), help="รอบเก็บข้อมูล (วินาที)")
+    parser.add_argument("--watch", default=_env("WATCH") or "", help="service/process ที่เฝ้าดู คั่นด้วย , เช่น nginx,mysql")
     args = parser.parse_args(argv)
 
     if not args.server or not args.token:
         raise SystemExit("ต้องระบุ --server และ --token (หรือ env MONITOR_SERVER_URL/MONITOR_TOKEN)")
-    return AgentConfig(server_url=args.server, token=args.token, interval=args.interval)
+    watch = tuple(n.strip() for n in args.watch.split(",") if n.strip())
+    return AgentConfig(
+        server_url=args.server,
+        token=args.token,
+        interval=args.interval,
+        watch=watch,
+    )

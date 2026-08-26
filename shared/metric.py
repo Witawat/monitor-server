@@ -62,6 +62,14 @@ class NetSample:
 
 
 @dataclass
+class ServiceSample:
+    """สถานะ up/down ของหนึ่ง service/process ที่ agent เฝ้าดู."""
+
+    name: str = ""
+    up: bool = False
+
+
+@dataclass
 class Snapshot:
     """หนึ่งจุดข้อมูล metric ของ host ณ เวลา ts (วินาที epoch)."""
 
@@ -75,6 +83,7 @@ class Snapshot:
     swap: SwapSample = field(default_factory=SwapSample)
     disk: list[DiskSample] = field(default_factory=list)
     net: list[NetSample] = field(default_factory=list)
+    services: list[ServiceSample] = field(default_factory=list)
     uptime: int = 0
     procs: int = 0
 
@@ -139,6 +148,13 @@ def snapshot_from_dict(data: dict[str, Any]) -> Snapshot:
             )
             for n in (data.get("net") or [])
         ],
+        services=[
+            ServiceSample(
+                name=str(s.get("name", "")),
+                up=bool(s.get("up", False)),
+            )
+            for s in (data.get("services") or [])
+        ],
         uptime=_as_int(data.get("uptime")),
         procs=_as_int(data.get("procs")),
     )
@@ -164,6 +180,7 @@ def snapshot_to_dict(snap: Snapshot) -> dict[str, Any]:
             {"iface": n.iface, "rx_bytes": n.rx_bytes, "tx_bytes": n.tx_bytes}
             for n in snap.net
         ],
+        "services": [{"name": s.name, "up": s.up} for s in snap.services],
         "uptime": snap.uptime,
         "procs": snap.procs,
     }

@@ -2,7 +2,7 @@
 
 > ลำดับทำจริง — ทำทีละเฟส, จบเฟสต้องผ่านเช็กลิสต์ก่อนไปต่อ.
 > อ้างอิง: `AGENTS.md` (กฎ), `KNOWLEDGE_BASE.md` (ความรู้), `CODING_GUIDE.md` (สไตล์), `WEBUI_DESIGN.md` (ดีไซน์).
-> **สถานะ: ครบทั้ง 5 เฟส (0–5) — เหลืองานเสริม + QA รอบสุดท้าย.**
+> **สถานะ: ครบทั้ง 5 เฟส (0–5) + งานเสริมครบแล้ว — ระบบสมบูรณ์ใช้งานได้.**
 
 ## ภาพรวม
 
@@ -14,6 +14,7 @@
 | 3 | WebUI: fleet + per-host dashboard + Chart.js | ✅ |
 | 4 | Alerting + notify + history | ✅ |
 | 5 | Build + Service (systemd/NSSM) + QA | ✅ |
+| งานเสริม | tags, service watch, export CSV, host-down notify, rate-limit login + CSP | ✅ |
 
 **ลำดับตรวจทุกเฟส:** `ruff check .` → `mypy server agent shared` → `pytest -q`
 
@@ -103,8 +104,8 @@
 ---
 
 ## งานเสริม (หลังเฟส 5, "แนะนำเพิ่ม")
-- [ ] grouping/tag host (env/location) + filter fleet
-- [ ] process/service watch (agent เช็ค up/down)
-- [ ] export CSV ต่อ metric
-- [ ] uptime/availability + notification เมื่อ host หาย
-- [ ] rate-limit login + CSP/security headers WebUI
+- [x] grouping/tag host (env/location) + filter fleet
+- [x] process/service watch (agent เช็ค up/down)
+- [x] export CSV ต่อ metric
+- [x] uptime/availability + notification เมื่อ host หาย
+- [x] rate-limit login + CSP/security headers WebUI

@@ -10,10 +10,14 @@
     return 'var(--accent)';
   }
 
-  function renderFleetCards(hosts, search = '') {
+  function renderFleetCards(hosts, search = '', tag = '') {
     const grid = document.getElementById('hostGrid');
-    const list = search ? hosts.filter((h) =>
-      (h.hostname + ' ' + h.host_id).toLowerCase().includes(search.toLowerCase())) : hosts;
+    let list = hosts.filter((h) => {
+      const text = (h.hostname + ' ' + h.host_id).toLowerCase();
+      const okSearch = !search || text.includes(search.toLowerCase());
+      const okTag = !tag || (h.tags || []).includes(tag);
+      return okSearch && okTag;
+    });
     if (!list.length) {
       grid.innerHTML = '<p class="empty-note">' + I18N.noHost + '</p>';
       return;
@@ -24,6 +28,7 @@
       const badge = online
         ? '<span class="badge online">● ออนไลน์</span>'
         : '<span class="badge offline">○ ออฟไลน์</span>';
+      const tags = (h.tags || []).map((t) => '<span class="badge online" style="background:var(--accent-soft);color:var(--accent)">#' + t + '</span>').join('');
       const net = online
         ? '<div class="netline"><span>↑ ' + formatRate(s.net_rx || 0) + '</span><span>↓ ' + formatRate(s.net_tx || 0) + '</span></div>'
         : '<div class="netline"><span>—</span><span>—</span></div>';
@@ -31,7 +36,7 @@
         '<div class="metric-row"><div class="label"><span>' + label + '</span><span>' + formatPercent(pct) + '</span></div>' +
         '<div class="progress"><span style="width:' + (pct || 0) + '%;background:' + fillColor(pct || 0) + '"></span></div></div>';
       return '<div class="card' + (online ? '' : ' offline') + '" data-host="' + h.host_id + '">' +
-        '<h3>' + h.hostname + ' ' + badge + '</h3>' +
+        '<h3>' + h.hostname + ' ' + badge + '</h3>' + tags +
         row('CPU', s.cpu_percent) + row('RAM', s.mem_percent) + row('Disk', s.disk_percent) +
         net +
         '<div class="netline"><span>uptime ' + formatUptime(online ? s.uptime : null) + '</span></div>' +
@@ -52,6 +57,14 @@
     ];
     document.getElementById('kpiRow').innerHTML = cells.map((c) =>
       '<div class="kpi"><div class="num">' + c[1] + '</div><div class="lbl">' + c[0] + (c[2] ? ' · ' + c[2] : '') + '</div></div>'
+    ).join('');
+  }
+
+  function renderServices(services) {
+    const el = document.getElementById('servicesRow');
+    if (!services || !services.length) { el.innerHTML = ''; return; }
+    el.innerHTML = services.map((s) =>
+      '<span class="badge ' + (s.up ? 'online' : 'offline') + '">' + (s.up ? '●' : '○') + ' ' + s.name + (s.up ? ' ทำงาน' : ' หยุด') + '</span>'
     ).join('');
   }
 
@@ -113,7 +126,17 @@
       const badge = document.getElementById('hostBadge');
       badge.className = 'badge ' + (host.online ? 'online' : 'offline');
       badge.textContent = host.online ? '● ออนไลน์' : '○ ออฟไลน์';
+      document.getElementById('exportBtn').href = '/api/v1/hosts/' + id + '/export?range=' + currentRange;
+      document.getElementById('tagInput').value = (host.tags || []).join(', ');
+      document.getElementById('saveTagsBtn').onclick = async () => {
+        const tags = document.getElementById('tagInput').value.split(',').map((t) => t.trim()).filter(Boolean);
+        try {
+          await api('/api/v1/hosts/' + id + '/tags', { method: 'PUT', body: JSON.stringify({ tags }) });
+          toast('success', I18N.saved);
+        } catch (e) { toast('error', e.message); }
+      };
       renderKpi(host.summary);
+      renderServices(host.services);
       renderChart(metrics.series);
     } catch (e) { toast('error', e.message); }
   }

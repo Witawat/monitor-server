@@ -92,13 +92,57 @@
   }
 
   function renderFleetView() {
-    Dashboard.renderFleetCards(fleetData);
+    renderFleetFiltered();
     updateStatusbar(fleetData);
+    loadTags();
     if (fleetTimer) clearInterval(fleetTimer);
     fleetTimer = setInterval(() => loadFleet(true), 10000);
     // search filter
     const input = document.getElementById('searchInput');
-    input.oninput = () => Dashboard.renderFleetCards(fleetData, input.value.trim());
+    input.oninput = () => renderFleetFiltered();
+    // online filter tabs
+    document.getElementById('filterAll').onclick = () => setOnlineFilter(null);
+    document.getElementById('filterOnline').onclick = () => setOnlineFilter(true);
+  }
+
+  let currentTag = '';
+  let currentOnline = null;
+
+  function getSearch() {
+    const input = document.getElementById('searchInput');
+    return input ? input.value.trim() : '';
+  }
+
+  function setOnlineFilter(online) {
+    currentOnline = online;
+    document.getElementById('filterAll').classList.toggle('active', online === null);
+    document.getElementById('filterOnline').classList.toggle('active', online === true);
+    renderFleetFiltered();
+  }
+
+  function setTag(tag) {
+    currentTag = tag;
+    document.querySelectorAll('#tagFilters .pill').forEach((p) =>
+      p.classList.toggle('active', p.dataset.tag === tag));
+    renderFleetFiltered();
+  }
+
+  function renderFleetFiltered() {
+    let list = fleetData;
+    if (currentOnline === true) list = list.filter((h) => h.online);
+    Dashboard.renderFleetCards(list, getSearch(), currentTag);
+  }
+
+  async function loadTags() {
+    try {
+      const tags = await api('/api/v1/hosts/tags');
+      const wrap = document.getElementById('tagFilters');
+      wrap.innerHTML = tags.map((t) =>
+        '<button class="pill" data-tag="' + t + '">#' + t + '</button>').join('');
+      wrap.querySelectorAll('.pill').forEach((p) => {
+        p.onclick = () => setTag(p.dataset.tag);
+      });
+    } catch (e) { /* เงียบ — tags เป็น optional */ }
   }
 
   function filteredHosts(search) {

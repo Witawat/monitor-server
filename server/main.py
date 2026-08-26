@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import argparse
 import secrets
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from server import __version__
 from server.alerting import AlertEngine
+from server.alerting.offline import HostDownMonitor
 from server.api.alerts import router as alerts_router
 from server.api.auth import router as auth_router
 from server.api.deps import SESSION_COOKIE
@@ -40,6 +41,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         cfg = config or AppConfig()
         app.state.config = cfg
         app.state.session_secret = cfg.webui.secret_key or secrets.token_hex(32)
+        from server.ingest import RateLimiter
+
+        app.state.login_limiter = RateLimiter()
         data_dir = Path(cfg.server.data_dir)
         data_dir.mkdir(parents=True, exist_ok=True)
         db = Database(data_dir / "monitor.db")
@@ -49,10 +53,30 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         engine = AlertEngine(db, cfg)
         app.state.alerting = engine
         app.state.ingest = IngestService(db, cfg, engine)
+        offline = HostDownMonitor(db, cfg)
+        app.state.offline = offline
+        offline.start()
         yield
+        await offline.stop()
         await db.close()
 
     app = FastAPI(title="monitor-server", version=__version__, lifespan=lifespan)
+
+    @app.middleware("http")
+    async def security_headers(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """เพิ่ม security headers (CSP + อื่นๆ) ทุก response."""
+
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+            "script-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+        )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
 
     app.include_router(ingest_router)
     app.include_router(hosts_router)

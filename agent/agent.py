@@ -39,7 +39,7 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
     fail_streak = 0
 
     while True:
-        batch: list[dict[str, Any]] = [snapshot_to_dict(collect.snapshot(host_id))]
+        batch: list[dict[str, Any]] = [snapshot_to_dict(collect.snapshot(host_id, watch=config.watch))]
         if push_batch(config.server_url, config.token, batch):
             fail_streak = 0
             _flush_queue(queue, config.server_url, config.token)

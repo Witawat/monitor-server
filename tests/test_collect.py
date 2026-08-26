@@ -11,7 +11,7 @@ from agent.collect import (
     parse_uptime,
     snapshot,
 )
-from shared.metric import DiskSample, MemorySample, NetSample, Snapshot, SwapSample
+from shared.metric import DiskSample, MemorySample, NetSample, ServiceSample, Snapshot, SwapSample
 
 
 class _FakeProvider:
@@ -40,6 +40,9 @@ class _FakeProvider:
 
     def procs(self) -> int:
         return 42
+
+    def services(self, names):
+        return [ServiceSample(name=n, up=(n == "nginx")) for n in names]
 
 
 def test_parse_meminfo():
@@ -71,7 +74,7 @@ def test_parse_net_dev():
 def test_snapshot_uses_provider():
     """snapshot() สร้างค่าจาก provider ที่ส่งเข้าไป."""
 
-    snap = snapshot("h1", provider=_FakeProvider())
+    snap = snapshot("h1", provider=_FakeProvider(), watch=["nginx", "mysql"])
     assert isinstance(snap, Snapshot)
     assert snap.host_id == "h1"
     assert snap.cpu_percent == 12.5
@@ -82,6 +85,7 @@ def test_snapshot_uses_provider():
     assert snap.uptime == 86400
     assert snap.procs == 42
     assert snap.platform == platform.system().lower()
+    assert snap.services == [ServiceSample(name="nginx", up=True), ServiceSample(name="mysql", up=False)]
 
 
 def test_host_id_persistent(tmp_path):

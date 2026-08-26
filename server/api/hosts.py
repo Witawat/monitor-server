@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from server.api.deps import require_admin
@@ -13,6 +13,14 @@ from server.storage.db import Database
 router = APIRouter(
     prefix="/api/v1/hosts", tags=["hosts"], dependencies=[Depends(require_admin)]
 )
+
+
+@router.get("/tags")
+async def list_tags(request: Request) -> JSONResponse:
+    """คืน tags ทั้งหมดที่ใช้อยู่ (สำหรับกรอง fleet)."""
+
+    db: Database = request.app.state.db
+    return JSONResponse(await db.list_all_tags())
 
 
 @router.get("")
@@ -49,3 +57,18 @@ async def delete_host(request: Request, host_id: str) -> JSONResponse:
     if not deleted:
         return JSONResponse({"detail": "ไม่พบ host"}, status_code=404)
     return JSONResponse({"status": "ok", "deleted": host_id})
+
+
+@router.put("/{host_id}/tags")
+async def set_tags(
+    request: Request, host_id: str, body: Annotated[dict[str, Any], Body()]
+) -> JSONResponse:
+    """ตั้ง tags ของ host (list[str]); 404 ถ้า host ไม่มี."""
+
+    tags = body.get("tags")
+    if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+        return JSONResponse({"detail": "tags ต้องเป็น list ของ string"}, status_code=400)
+    db: Database = request.app.state.db
+    if not await db.set_host_tags(host_id, tags):
+        return JSONResponse({"detail": "ไม่พบ host"}, status_code=404)
+    return JSONResponse({"ok": True, "host_id": host_id, "tags": tags})

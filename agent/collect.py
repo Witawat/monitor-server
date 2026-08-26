@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 from typing import Protocol
 
-from shared.metric import DiskSample, MemorySample, NetSample, Snapshot, SwapSample
+from shared.metric import DiskSample, MemorySample, NetSample, ServiceSample, Snapshot, SwapSample
 
 try:  # psutil เป็น optional — fallback stdlib ถ้าไม่มี
     import psutil  # type: ignore[import-untyped]
@@ -86,6 +86,7 @@ class SysInfoProvider(Protocol):
     def net(self) -> list[NetSample]: ...
     def uptime(self) -> int: ...
     def procs(self) -> int: ...
+    def services(self, names: list[str]) -> list[ServiceSample]: ...
 
 
 class _PsutilProvider:
@@ -135,6 +136,14 @@ class _PsutilProvider:
 
     def procs(self) -> int:
         return len(psutil.pids())
+
+    def services(self, names: list[str]) -> list[ServiceSample]:
+        running = {p.info["name"] for p in psutil.process_iter(["name"])}
+        lowered = {n.lower() for n in running if n}
+        return [
+            ServiceSample(name=n, up=n.lower() in lowered)
+            for n in names
+        ]
 
 
 class _StdlibProvider:
@@ -249,6 +258,10 @@ class _StdlibProvider:
                 pass
         return 0
 
+    def services(self, names: list[str]) -> list[ServiceSample]:
+        # stdlib ไม่มีวิธีระบุ process ได้ครบทุกแพลตฟอร์ม — คืน not-up เพื่อความชัดเจน
+        return [ServiceSample(name=n, up=False) for n in names]
+
 
 def _make_provider() -> SysInfoProvider:
     """เลือก provider ตามว่า import psutil ได้หรือไม่."""
@@ -256,7 +269,9 @@ def _make_provider() -> SysInfoProvider:
     return _PsutilProvider() if psutil is not None else _StdlibProvider()
 
 
-def snapshot(host_id: str, provider: SysInfoProvider | None = None) -> Snapshot:
+def snapshot(
+    host_id: str, provider: SysInfoProvider | None = None, watch: list[str] | tuple[str, ...] = ()
+) -> Snapshot:
     """สร้าง Snapshot ปัจจุบันของ host (ใช้ provider ที่ระบุ หรือ auto-select)."""
 
     prov = provider or _make_provider()
@@ -273,6 +288,7 @@ def snapshot(host_id: str, provider: SysInfoProvider | None = None) -> Snapshot:
         swap=SwapSample(total=swap_total, used=swap_used),
         disk=prov.disk(),
         net=prov.net(),
+        services=prov.services(list(watch)),
         uptime=prov.uptime(),
         procs=prov.procs(),
     )

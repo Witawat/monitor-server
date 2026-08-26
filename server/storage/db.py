@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS hosts (
     hostname  TEXT NOT NULL DEFAULT '',
     platform  TEXT NOT NULL DEFAULT '',
     token     TEXT NOT NULL DEFAULT '',
+    tags      TEXT NOT NULL DEFAULT '[]',
     first_seen INTEGER NOT NULL,
     last_seen  INTEGER NOT NULL
 );
@@ -95,6 +96,15 @@ CREATE TABLE IF NOT EXISTS net_samples (
 );
 CREATE INDEX IF NOT EXISTS idx_net_host_ts ON net_samples(host_id, ts);
 
+CREATE TABLE IF NOT EXISTS service_samples (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_id TEXT NOT NULL,
+    ts      INTEGER NOT NULL,
+    name    TEXT NOT NULL,
+    up      INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_service_host_ts ON service_samples(host_id, ts);
+
 CREATE TABLE IF NOT EXISTS alert_rules (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     name      TEXT NOT NULL,
@@ -138,7 +148,18 @@ class Database:
         self._conn.row_factory = aiosqlite.Row
         await self._conn.execute("PRAGMA journal_mode=WAL")
         await self._conn.executescript(_SCHEMA)
+        await self._migrate()
         await self._conn.commit()
+
+    async def _migrate(self) -> None:
+        """ย้าย schema เก่า: เพิ่มคอลัมน์ tags ถ้า DB เดิมยังไม่มี."""
+
+        cur = await self._require().execute("PRAGMA table_info(hosts)")
+        cols = {row["name"] for row in await cur.fetchall()}
+        if "tags" not in cols:
+            await self._require().execute(
+                "ALTER TABLE hosts ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'"
+            )
 
     async def close(self) -> None:
         """ปิด connection."""
@@ -237,6 +258,14 @@ class Database:
                 """,
                 (snap.host_id, snap.ts, n.iface, n.rx_bytes, n.tx_bytes),
             )
+        for s in snap.services:
+            await conn.execute(
+                """
+                INSERT INTO service_samples (host_id, ts, name, up)
+                VALUES (?, ?, ?, ?)
+                """,
+                (snap.host_id, snap.ts, s.name, 1 if s.up else 0),
+            )
         await conn.commit()
 
     async def insert_batch(self, snaps: list[Snapshot]) -> None:
@@ -270,6 +299,14 @@ class Database:
                     """,
                     (snap.host_id, snap.ts, n.iface, n.rx_bytes, n.tx_bytes),
                 )
+            for s in snap.services:
+                await conn.execute(
+                    """
+                    INSERT INTO service_samples (host_id, ts, name, up)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (snap.host_id, snap.ts, s.name, 1 if s.up else 0),
+                )
         await conn.commit()
 
     # ── query ──
@@ -280,7 +317,7 @@ class Database:
         cutoff = int(time.time()) - timeout_sec
         conn = self._require()
         rows = await conn.execute_fetchall(
-            "SELECT host_id, hostname, platform, first_seen, last_seen FROM hosts ORDER BY hostname"
+            "SELECT host_id, hostname, platform, tags, first_seen, last_seen FROM hosts ORDER BY hostname"
         )
         result: list[dict[str, Any]] = []
         for r in rows:
@@ -289,6 +326,7 @@ class Database:
             if online_only and not online:
                 continue
             h["online"] = online
+            h["tags"] = json.loads(h["tags"] or "[]")
             h["summary"] = await self._latest_summary(h["host_id"])
             result.append(h)
         return result
@@ -297,7 +335,7 @@ class Database:
         """คืน detail host เดียว + snapshot ล่าสุด (None ถ้าไม่พบ)."""
 
         cur = await self._require().execute(
-            "SELECT host_id, hostname, platform, first_seen, last_seen FROM hosts WHERE host_id = ?",
+            "SELECT host_id, hostname, platform, tags, first_seen, last_seen FROM hosts WHERE host_id = ?",
             (host_id,),
         )
         row = await cur.fetchone()
@@ -305,8 +343,43 @@ class Database:
             return None
         h = dict(row)
         h["online"] = h["last_seen"] >= (int(time.time()) - timeout_sec)
+        h["tags"] = json.loads(h["tags"] or "[]")
         h["summary"] = await self._latest_summary(host_id)
+        h["services"] = await self.latest_services(host_id)
         return h
+
+    async def set_host_tags(self, host_id: str, tags: list[str]) -> bool:
+        """ตั้ง tags ของ host; คืน True ถ้า host มีอยู่."""
+
+        cur = await self._require().execute(
+            "UPDATE hosts SET tags = ? WHERE host_id = ?",
+            (json.dumps(tags), host_id),
+        )
+        await self._require().commit()
+        return cur.rowcount > 0
+
+    async def list_all_tags(self) -> list[str]:
+        """รวบรวม tags ที่ใช้อยู่ทั้งหมด (ไม่ซ้ำ) สำหรับกรอง fleet."""
+
+        rows = await self._require().execute_fetchall("SELECT tags FROM hosts")
+        seen: set[str] = set()
+        for r in rows:
+            for t in json.loads(r["tags"] or "[]"):
+                seen.add(t)
+        return sorted(seen)
+
+    async def latest_services(self, host_id: str) -> list[dict[str, Any]]:
+        """คืนสถานะ service ล่าสุดของ host (ชุด ts ล่าสุดเท่านั้น)."""
+
+        cur = await self._require().execute(
+            """
+            SELECT name, up FROM service_samples WHERE host_id = ? AND ts =
+                (SELECT MAX(ts) FROM service_samples WHERE host_id = ?)
+            ORDER BY name
+            """,
+            (host_id, host_id),
+        )
+        return [dict(r) for r in await cur.fetchall()]
 
     async def _latest_summary(self, host_id: str) -> dict[str, Any]:
         """คืน snapshot ล่าสุดของ host (cpu/mem/disk/uptime) เพื่อการ์ด fleet."""
@@ -375,6 +448,22 @@ class Database:
                 points = [[ts, group[0][idx]] for ts, group in sorted(agg.items())]
             result[m] = {"unit": METRIC_UNITS.get(m, ""), "points": points}
         return result
+
+    async def export_rows(
+        self, host_id: str, range_sec: int, metric_names: list[str]
+    ) -> list[dict[str, Any]]:
+        """คืน raw rows (ts + ค่า metric) สำหรับ export CSV."""
+
+        cols = [METRIC_COLUMNS[m] for m in metric_names if m in METRIC_COLUMNS]
+        if not cols:
+            return []
+        start_ts = int(time.time()) - range_sec
+        rows = await self._require().execute_fetchall(
+            f"SELECT ts, {', '.join(cols)} FROM metrics "
+            "WHERE host_id = ? AND ts >= ? ORDER BY ts",
+            (host_id, start_ts),
+        )
+        return [dict(r) for r in rows]
 
     @staticmethod
     def _pick_bucket(range_sec: int, target_points: int = 200) -> int:
