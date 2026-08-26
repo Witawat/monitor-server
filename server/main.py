@@ -238,7 +238,26 @@ def _parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(description="monitor-server")
     parser.add_argument("--config", default="config.toml", help="เส้นทาง config.toml")
+    parser.add_argument("--no-browser", action="store_true", help="ไม่เปิด WebUI ใน browser อัตโนมัติ")
     return parser.parse_args()
+
+
+def _open_browser(host: str, port: int, delay: float = 1.5) -> None:
+    """เปิด WebUI ใน browser หลัง server เริ่มรับ (ไม่ block loop)."""
+
+    import threading
+    import time
+    import webbrowser
+
+    url = f"http://{host}:{port}/"
+    if host in ("0.0.0.0", "::"):
+        url = f"http://127.0.0.1:{port}/"
+
+    def _open() -> None:
+        time.sleep(delay)
+        webbrowser.open(url)
+
+    threading.Thread(target=_open, daemon=True).start()
 
 
 def main() -> None:
@@ -250,6 +269,8 @@ def main() -> None:
     cfg_path = _ensure_config(_resolve_config_path(args.config))
     config = load_config(cfg_path)
     app = create_app(config)
+    if not args.no_browser:
+        _open_browser(config.server.host, config.server.port)
     uvicorn.run(app, host=config.server.host, port=config.server.port)
 
 

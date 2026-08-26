@@ -84,11 +84,16 @@ python run.py --config config.toml
 python -m server.main --config config.toml
 ```
 
+> 💡 เมื่อรัน server แล้ว **เปิด WebUI ใน browser อัตโนมัติ** (url = `http://<host>:<port>/`)
+> ถ้าไม่อยากเปิด ใส่ `--no-browser` ท้ายคำสั่ง
+
 ### 3.2 โหมด exe (build แล้ว) — แนะนำสำหรับ production
 
 ```powershell
-# รัน exe ในโฟลเดอร์ dist
+# รัน exe ในโฟลเดอร์ dist (เปิด WebUI ใน browser อัตโนมัติ)
 monitor-server.exe --config config.toml
+# ไม่เปิด browser อัตโนมัติ
+monitor-server.exe --config config.toml --no-browser
 ```
 
 **ไฟล์ runtime อยู่ข้าง exe**: `config.toml` + `data/` + `logs/` ถูกสร้าง/ใช้ข้างตัว exe (ไม่ต้อง `cd` ไปที่อื่น) — ครั้งแรกที่รันถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin.
@@ -321,6 +326,7 @@ sudo bash scripts/install-agent.sh <server_url> <token> [interval]
 | host_id/queue อยู่ใต้ exe | agent exe เก็บ state ข้าง exe — อย่าลบไฟล์ `host_id`/`queue.json` |
 | ไม่มี alert ตามที่ตั้ง | ตรวจ `duration` + metric name ต้องตรงรายการ (cpu_percent, memory.percent...) |
 | ลง service ไม่ได้ (Windows) | ต้องติดตั้ง **NSSM** ก่อน อยู่ใน PATH |
+| รันแล้วหน้า WebUI ไม่เปิด | ลองเปิดเอง `http://127.0.0.1:<port>/` หรือเพิ่ม `--no-browser` เพื่อลดข้อผิดพลาด |
 | port ที่เฝ้าแสดงปิดผิด | agent ใช้ `127.0.0.1` — บริการที่ bind เฉพาะที่อยู่ (ไม่ใช่ localhost/all) จะไม่เห็น |
 
 ---

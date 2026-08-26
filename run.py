@@ -84,6 +84,7 @@ def main() -> None:
         default=None,
         help="จัดการ Windows service ผ่าน NSSM",
     )
+    parser.add_argument("--no-browser", action="store_true", help="ไม่เปิด WebUI ใน browser อัตโนมัติ")
     args = parser.parse_args()
 
     if args.service:

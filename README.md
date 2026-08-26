@@ -2,6 +2,8 @@
 
 ระบบ monitor server ข้ามแพลตฟอร์ม (Linux + Windows) ที่มี **central server** รวบรวม metrics จากหลายเครื่อง แล้วแสดงผ่าน **Web UI แบบ dashboard** (แรงบันดาลใจจาก DigitalOcean / Plesk) โดยมี **agent ขนาดเล็ก** ติดตั้งบนแต่ละเครื่องที่ถูก monitor คอยเก็บ metrics แล้ว **push** มาที่ server แบบรวดเร็ว
 
+> 💡 เมื่อรัน server แล้ว **เปิด WebUI ใน browser อัตโนมัติ** — ใช้ `--no-browser` เพื่อปิด
+
 > สแต็ก + กฎถูกล็อกใน `AGENTS.md` — ห้ามเปลี่ยนสถาปัตยกรรม push model หรือ stack โดยไม่ตกลงก่อน
 
 ## สถาปัตยกรรมโดยย่อ
