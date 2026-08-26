@@ -2,7 +2,28 @@
 (function () {
   const { api, toast } = window.Monitor;
   let currentRange = '1h';
+  let currentMetric = 'cpu_percent';
   let chart = null;
+
+  // metric ที่ plot ได้ (ตรงกับ METRIC_COLUMNS มิติที่ไม่มี disk/net time-series)
+  const METRICS = [
+    { key: 'cpu_percent', label: 'CPU %', unit: 'percent' },
+    { key: 'memory.percent', label: 'RAM %', unit: 'percent' },
+    { key: 'memory.used', label: 'RAM used', unit: 'bytes' },
+    { key: 'memory.total', label: 'RAM total', unit: 'bytes' },
+    { key: 'load1', label: 'Load 1m', unit: 'num' },
+    { key: 'load5', label: 'Load 5m', unit: 'num' },
+    { key: 'load15', label: 'Load 15m', unit: 'num' },
+    { key: 'swap.used', label: 'Swap used', unit: 'bytes' },
+    { key: 'swap.total', label: 'Swap total', unit: 'bytes' },
+    { key: 'procs', label: 'Processes', unit: 'num' },
+    { key: 'uptime', label: 'Uptime', unit: 'sec' },
+  ];
+
+  function unitOf(key) {
+    const m = METRICS.find((x) => x.key === key);
+    return m ? m.unit : 'num';
+  }
 
   function fillColor(p) {
     if (p >= 90) return 'var(--danger)';
@@ -30,13 +51,13 @@
         : '<span class="badge offline">○ ออฟไลน์</span>';
       const tags = (h.tags || []).map((t) => '<span class="badge online" style="background:var(--accent-soft);color:var(--accent)">#' + escapeHtml(t) + '</span>').join('');
       const net = online
-        ? '<div class="netline"><span>↑ ' + formatRate(s.net_rx || 0) + '</span><span>↓ ' + formatRate(s.net_tx || 0) + '</span></div>'
+        ? '<div class="netline"><span>↑ ' + formatRate(s.net_tx || 0) + '</span><span>↓ ' + formatRate(s.net_rx || 0) + '</span></div>'
         : '<div class="netline"><span>—</span><span>—</span></div>';
       const row = (label, pct) =>
         '<div class="metric-row"><div class="label"><span>' + label + '</span><span>' + formatPercent(pct) + '</span></div>' +
         '<div class="progress"><span style="width:' + (pct || 0) + '%;background:' + fillColor(pct || 0) + '"></span></div></div>';
       return '<div class="card' + (online ? '' : ' offline') + '" data-host="' + escapeHtml(h.host_id) + '">' +
-        '<h3>' + escapeHtml(h.hostname) + ' ' + badge + '</h3>' + tags +
+        '<h3>' + escapeHtml(h.hostname || h.host_id) + ' ' + badge + '</h3>' + tags +
         row('CPU', s.cpu_percent) + row('RAM', s.mem_percent) + row('Disk', s.disk_percent) +
         net +
         '<div class="netline"><span>uptime ' + formatUptime(online ? s.uptime : null) + '</span></div>' +
@@ -52,9 +73,10 @@
     const cells = [
       ['CPU', formatPercent(s.cpu_percent), ''],
       ['RAM', formatPercent(s.mem_percent), formatBytes(s.mem_total)],
-      ['Disk', formatPercent(s.disk_percent), formatBytes(s.disk_total || s.mem_total)],
+      ['Disk', formatPercent(s.disk_percent), formatBytes(s.disk_total || 0)],
       ['Uptime', formatUptime(s.uptime), ''],
-    ];    document.getElementById('kpiRow').innerHTML = cells.map((c) =>
+    ];
+    document.getElementById('kpiRow').innerHTML = cells.map((c) =>
       '<div class="kpi"><div class="num">' + c[1] + '</div><div class="lbl">' + c[0] + (c[2] ? ' · ' + c[2] : '') + '</div></div>'
     ).join('');
   }
@@ -74,29 +96,39 @@
     return new Date(ms).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
   }
 
+  // format ค่า metric ตามหน่วย — ใช้ format.js ร่วมกัน (กันตัวเลขเพี้ยนข้ามหน้า)
+  function fmtByUnit(v, unit) {
+    if (unit === 'percent') return formatPercent(v);
+    if (unit === 'bytes') return formatBytes(v);
+    if (unit === 'sec') return formatUptime(v);
+    return formatInt(v);
+  }
+
   function renderChart(series) {
-    if (chart) { chart.destroy(); chart = null; }  // กัน instance leak (M8)
+    if (chart) { chart.destroy(); chart = null; }
     const wrap = document.querySelector('.chart-wrap');
-    const any = Object.values(series).some((s) => s.points && s.points.length);
-    if (!any) {
+    const s = series[currentMetric];
+    const points = s && s.points ? s.points : [];
+    if (!points.length) {
       wrap.innerHTML = '<div class="empty-note">' + I18N.noData + '</div>';
       return;
     }
     wrap.innerHTML = '<canvas id="metricChart"></canvas>';
     const ctx = document.getElementById('metricChart');
-    const datasets = Object.entries(series).map(([name, s]) => ({
-      label: name,
-      data: s.points.map((p) => ({ x: p[0] * 1000, y: p[1] })),
-      borderColor: 'var(--accent)',
-      borderWidth: 2,
-      pointRadius: 0,
-      tension: 0.3,
-      fill: false,
-      unit: s.unit,
-    }));
+    const unit = unitOf(currentMetric);
     chart = new Chart(ctx, {
       type: 'line',
-      data: { datasets },
+      data: {
+        datasets: [{
+          label: METRICS.find((m) => m.key === currentMetric).label,
+          data: points.map((p) => ({ x: p[0] * 1000, y: p[1] })),
+          borderColor: 'var(--accent)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false,
+        }],
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -105,24 +137,22 @@
         scales: {
           x: {
             type: 'linear',
-            ticks: {
-              maxTicksLimit: 8,
-              callback: (v) => formatAxisTime(v),
-            },
+            ticks: { maxTicksLimit: 8, callback: (v) => formatAxisTime(v) },
           },
-          y: { beginAtZero: true },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (v) => fmtByUnit(v, unit),
+            },
+            title: { display: true, text: METRICS.find((m) => m.key === currentMetric).label, color: 'var(--text-2)' },
+          },
         },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               title: (items) => formatAxisTime(items[0].parsed.x),
-              label: (c) => {
-                const ds = datasets[c.datasetIndex];
-                const unit = ds.unit === '%' ? '%' : (ds.unit === 'bytes' ? 'bytes' : '');
-                const val = unit === '%' ? formatPercent(c.raw.y) : (unit === 'bytes' ? formatBytes(c.raw.y) : formatInt(c.raw.y));
-                return ds.label + ': ' + val;
-              },
+              label: (c) => METRICS.find((m) => m.key === currentMetric).label + ': ' + fmtByUnit(c.raw.y, unit),
             },
           },
         },
@@ -133,7 +163,7 @@
   async function renderHostView(id) {
     try {
       const host = await api('/api/v1/hosts/' + id);
-      const metrics = await api('/api/v1/hosts/' + id + '/metrics?range=' + currentRange);
+      const metrics = await api('/api/v1/hosts/' + id + '/metrics?range=' + currentRange + '&metrics=' + currentMetric);
       document.getElementById('hostTitle').textContent = host.hostname || host.host_id;
       const badge = document.getElementById('hostBadge');
       badge.className = 'badge ' + (host.online ? 'online' : 'offline');
@@ -149,11 +179,29 @@
       };
       renderKpi(host.summary);
       renderServices(host.services);
+      renderMetricChips();
       renderChart(metrics.series);
     } catch (e) { toast('error', e.message); }
   }
 
-  // range buttons (bind ครั้งเดียว — ใช้ event delegation กัน re-render)
+  // metric selector chips — แสดง metric ที่เลือก (plot ทีละตัว กันสเกลเพี้ยน)
+  function renderMetricChips() {
+    const wrap = document.getElementById('metricChips');
+    if (!wrap) return;
+    wrap.innerHTML = METRICS.map((m) =>
+      '<button class="pill' + (m.key === currentMetric ? ' active' : '') + '" data-metric="' + m.key + '">' + m.label + '</button>'
+    ).join('');
+    wrap.querySelectorAll('[data-metric]').forEach((b) => {
+      b.onclick = () => {
+        currentMetric = b.dataset.metric;
+        wrap.querySelectorAll('[data-metric]').forEach((x) => x.classList.toggle('active', x === b));
+        const id = currentRouteId();
+        if (id) renderHostView(id);
+      };
+    });
+  }
+
+  // range buttons (event delegation กัน re-render)
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-range]');
     if (!btn) return;

@@ -6,6 +6,7 @@ const I18N = {
   online: 'ออนไลน์',
   offline: 'ออฟไลน์',
   all: 'ทั้งหมด',
+  loading: 'กำลังโหลด…',
   noData: 'ไม่มีข้อมูลในช่วงนี้',
   noHost: 'ยังไม่มี host — ติดตั้ง agent',
   noHostData: 'ยังไม่มีข้อมูล — รอ push แรก',

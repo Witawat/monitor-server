@@ -55,6 +55,19 @@ async def test_known_token_updates_last_seen(service):
     assert host_id == "h1"
 
 
+async def test_precreated_host_empty_hostname_adopts_snapshot(service):
+    """host ที่สร้างก่อนด้วย token (hostname ว่าง) → ingest ใช้ hostname จาก snapshot.
+
+    กันกรณี host ถูกสร้างผ่าน set_host_token ก่อน first push จน hostname ค้างว่าง.
+    """
+
+    await service._db.set_host_token("h2", "tok-b")
+    await service.process_batch("tok-b", "1.1.1.1", _batch(host_id="h2", hostname="web-02"))
+    host = await service._db.host_by_token("tok-b")
+    assert host is not None
+    assert host["hostname"] == "web-02"
+
+
 async def test_unauthorized_when_registration_off(service):
     """token ไม่รู้จัก + ปิด auto-register → UnauthorizedToken."""
 

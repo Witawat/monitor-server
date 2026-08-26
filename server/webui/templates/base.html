@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monitor</title>
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
@@ -25,6 +26,7 @@
       <a href="#/settings" data-nav="settings">ตั้งค่า</a>
     </nav>
     <main class="content" id="content">
+      <div class="banner error" id="errorBanner" style="display:none"></div>
       {% include "parts/fleet.html" %}
       {% include "parts/host.html" %}
       {% include "parts/alerts.html" %}
@@ -32,7 +34,7 @@
     </main>
   </div>
 
-  <footer class="statusbar" id="statusbar">Monitor v0.1.0</footer>
+  <footer class="statusbar" id="statusbar">Monitor v{{ version }}</footer>
 </div>
 
 <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">

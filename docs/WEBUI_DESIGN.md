@@ -188,9 +188,9 @@ setScale();
 └──────────────────────────────────────────────────┘
 ```
 - **KPI row**: เลขเด่นใหญ่ + sub-label (cores/GB/GB)
-- **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d rollup), เลือก metric (CPU/RAM/Disk/Net)
+- **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector ใต้ KPI — plot ทีละตัวเดียว กันสเกลเพี้ยน เช่น uptime วินาทีปน CPU %)
 - alert ที่ active ของ host นี้: แถบเตือนสีแดง/เหลืองด้านบน
-- data: `GET /api/v1/hosts/{id}/metrics?range=...`
+- data: `GET /api/v1/hosts/{id}/metrics?range=...&metrics=<metric>` (ระบุ metric เดียว → แสดงเส้นเดียว + y-axis ตั้งชื่อตาม unit)
 
 ### 5.4 Alerts
 ```
@@ -219,6 +219,7 @@ setScale();
 ```
 - token: gen/revoke ต่อ host (ตาราง)
 - เปลี่ยนแล้ว `POST` → เขียน config.toml + ใช้ทันที
+- alert rule form: Host เป็น dropdown (— ทุก host — + รายชื่อ host จริง), Metric ตรงกับรายการที่ alert engine รองรับ (cpu_percent/memory.percent/used/total/swap.used/total/load1/5/15/disk.percent/uptime/procs)
 
 ---
 

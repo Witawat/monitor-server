@@ -43,3 +43,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+.playwright-mcp/
+

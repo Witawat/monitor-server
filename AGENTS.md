@@ -109,6 +109,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - WebUI เป็น single-page (SPA) — `templates/base.html` + `templates/parts/*.html` (ใช้ `{% include %}`) — JS สลับ view
 - JS แยกโมดูลใน `static/js/` (`app`/`dashboard`/`alerts` + `scale`/`format`/`i18n`) — format ตัวเลข/หน่วยรวมใน `format.js` (ห้ามแต่ละหน้าเขียนเอง) · UI scale ทั้งกรอบด้วย `zoom` + `scale.js`
 - dashboard realtime: เลือก host → poll `/api/v1/hosts/{id}/metrics?range=1h` (หรือ SSE ถ้าจะ push) + Chart.js
+- chart: เลือก metric ทีละตัว (chip selector) + range (1h/6h/1d/7d) — y-axis ตั้งชื่อตาม unit, ค่า format ผ่าน format.js (ไม่ plot ทุก metric รวมกัน กันสเกลเพี้ยน)
 - API อยู่ใต้ `/api/*` — ห้ามชน static · Auth หน้า WebUI (admin user/pass, bcrypt, HttpOnly cookie)
 - กฎ UI ยึด `docs/WEBUI_DESIGN.md` — responsive 360/768/1280, `font-size: clamp`, Chart.js bundle local (ไม่ใช้ CDN)
 

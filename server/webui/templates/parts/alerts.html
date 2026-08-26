@@ -10,14 +10,24 @@
     <input type="hidden" id="ruleId">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
       <div class="field"><label for="ruleName">ชื่อ</label><input id="ruleName" placeholder="CPU สูง"></div>
-      <div class="field"><label for="ruleHost">Host (ว่าง=ทุก)</label><input id="ruleHost" placeholder="web-01"></div>
+      <div class="field"><label for="ruleHost">Host (ว่าง=ทุก)</label>
+        <select id="ruleHost">
+          <option value="">— ทุก host —</option>
+        </select>
+      </div>
       <div class="field"><label for="ruleMetric">Metric</label>
         <select id="ruleMetric">
           <option value="cpu_percent">cpu_percent</option>
           <option value="memory.percent">memory.percent</option>
           <option value="memory.used">memory.used</option>
+          <option value="memory.total">memory.total</option>
+          <option value="swap.used">swap.used</option>
+          <option value="swap.total">swap.total</option>
           <option value="load1">load1</option>
+          <option value="load5">load5</option>
+          <option value="load15">load15</option>
           <option value="disk.percent">disk.percent</option>
+          <option value="uptime">uptime</option>
           <option value="procs">procs</option>
         </select>
       </div>

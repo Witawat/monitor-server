@@ -33,6 +33,15 @@
     if (type !== 'error') setTimeout(() => el.remove(), 4000);
   }
 
+  function showBanner(msg) {
+    const b = document.getElementById('errorBanner');
+    if (b) { b.textContent = msg; b.style.display = 'block'; }
+  }
+  function hideBanner() {
+    const b = document.getElementById('errorBanner');
+    if (b) { b.textContent = ''; b.style.display = 'none'; }
+  }
+
   // ── modal confirm ──
   function confirmModal(text) {
     return new Promise((resolve) => {
@@ -87,26 +96,23 @@
   async function loadFleet(quiet) {
     try {
       fleetData = await api('/api/v1/hosts');
+      hideBanner();
       renderFleetView();
-    } catch (e) { if (!quiet) toast('error', e.message); }
+    } catch (e) {
+      if (!quiet) { toast('error', e.message); }
+      if (!fleetData.length) showBanner(I18N.networkErr);
+    }
   }
 
   function renderFleetView() {
     renderFleetFiltered();
     updateStatusbar(fleetData);
-    loadTags();
     if (fleetTimer) clearInterval(fleetTimer);
     fleetTimer = setInterval(() => loadFleet(true), 10000);
-    // search filter
-    const input = document.getElementById('searchInput');
-    input.oninput = () => renderFleetFiltered();
-    // online filter tabs
-    document.getElementById('filterAll').onclick = () => setOnlineFilter(null);
-    document.getElementById('filterOnline').onclick = () => setOnlineFilter(true);
   }
 
   let currentTag = '';
-  let currentOnline = null;
+  let currentOnline = null;  // null=ทั้งหมด, true=ออนไลน์, false=ออฟไลน์
 
   function getSearch() {
     const input = document.getElementById('searchInput');
@@ -117,6 +123,7 @@
     currentOnline = online;
     document.getElementById('filterAll').classList.toggle('active', online === null);
     document.getElementById('filterOnline').classList.toggle('active', online === true);
+    document.getElementById('filterOffline').classList.toggle('active', online === false);
     renderFleetFiltered();
   }
 
@@ -130,6 +137,7 @@
   function renderFleetFiltered() {
     let list = fleetData;
     if (currentOnline === true) list = list.filter((h) => h.online);
+    if (currentOnline === false) list = list.filter((h) => !h.online);
     Dashboard.renderFleetCards(list, getSearch(), currentTag);
   }
 
@@ -152,10 +160,15 @@
   }
 
   // ── statusbar ──
+  let versionPrefix = '';
   function updateStatusbar(hosts) {
     const online = hosts.filter((h) => h.online).length;
     const offline = hosts.length - online;
-    statusbar.textContent = 'Monitor v0.1.0 · ' + online + ' host ออนไลน์ · ' + offline + ' ออฟไลน์';
+    if (!versionPrefix) {
+      const m = statusbar.textContent.match(/Monitor v[0-9.]+/);
+      versionPrefix = m ? m[0] : 'Monitor';
+    }
+    statusbar.textContent = versionPrefix + ' · ' + online + ' host ออนไลน์ · ' + offline + ' ออฟไลน์';
   }
 
   // ── user + logout ──
@@ -174,8 +187,17 @@
   // ── boot ──
   window.addEventListener('DOMContentLoaded', async () => {
     initUser();
+    const grid = document.getElementById('hostGrid');
+    if (grid) grid.innerHTML = '<p class="empty-note">' + I18N.loading + '</p>';
+    // bind ครั้งเดียว (ไม่ทำซ้ำตอน poll)
+    const input = document.getElementById('searchInput');
+    if (input) input.oninput = () => renderFleetFiltered();
+    document.getElementById('filterAll').onclick = () => setOnlineFilter(null);
+    document.getElementById('filterOnline').onclick = () => setOnlineFilter(true);
+    document.getElementById('filterOffline').onclick = () => setOnlineFilter(false);
     await route();
     await loadFleet();
+    loadTags();
   });
 
   // expose สำหรับ dashboard.js / alerts.js

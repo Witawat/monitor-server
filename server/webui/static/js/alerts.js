@@ -60,10 +60,15 @@
 
   async function loadAlerts() {
     try {
-      const [rules, history] = await Promise.all([
+      const [rules, history, hosts] = await Promise.all([
         api('/api/v1/alerts'),
         api('/api/v1/alerts/history'),
+        api('/api/v1/hosts'),
       ]);
+      // เติมตัวเลือก host ในฟอร์มกฎ
+      const hostSel = document.getElementById('ruleHost');
+      hostSel.innerHTML = '<option value="">— ทุก host —</option>' +
+        hosts.map((h) => '<option value="' + escapeHtml(h.host_id) + '">' + escapeHtml(h.hostname || h.host_id) + '</option>').join('');
       const body = document.getElementById('alertsBody');
       const tabRules = document.getElementById('tabRules');
       const tabHistory = document.getElementById('tabHistory');
@@ -117,8 +122,8 @@
           });
         }
       };
-      tabRules.onclick = () => { tabRules.classList.add('active'); tabHistory.classList.remove('active'); render(); };
-      tabHistory.onclick = () => { tabHistory.classList.add('active'); tabRules.classList.remove('active'); render(); };
+      tabRules.onclick = () => { tabRules.classList.add('active'); tabHistory.classList.remove('active'); loadAlerts(); };
+      tabHistory.onclick = () => { tabHistory.classList.add('active'); tabRules.classList.remove('active'); loadAlerts(); };
       render();
     } catch (e) { toast('error', e.message); }
   }

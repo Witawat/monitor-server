@@ -110,8 +110,10 @@ class IngestService:
             platform = str(raw[0].get("platform", ""))
         else:
             host_id = host["host_id"]
-            hostname = str(host["hostname"])
-            platform = str(host["platform"])
+            # agent ส่ง hostname/platform สดมาเสมอ — ใช้ค่านี้ต่อเมื่อไม่ว่าง
+            # (กันกรณี host ถูกสร้างด้วย token ก่อน first push → hostname ว่างค้าง)
+            hostname = str(raw[0].get("hostname") or host["hostname"])
+            platform = str(raw[0].get("platform") or host["platform"])
 
         snaps: list[Snapshot] = []
         for item in raw:

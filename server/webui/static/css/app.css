@@ -59,6 +59,13 @@ body {
   background: var(--surface); color: var(--text-2); font-size: 0.8125rem;
 }
 
+/* ── error / info banner (WEBUI_DESIGN.md §10) ── */
+.banner {
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 0.875rem;
+}
+.banner.error { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+.banner.info { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
+
 /* ── view ── */
 .view { display: none; }
 .view.active { display: block; }

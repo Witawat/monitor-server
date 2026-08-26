@@ -45,6 +45,9 @@ def test_login_success_sets_cookie(tmp_path):
         home = c.get("/")
         assert home.status_code == 200
         assert 'id="view-fleet"' in home.text  # include parts ทำงาน
+        # version จาก __version__ ไม่ใช่ hardcode (regression กัน UI โชว์ v0.1.0)
+        from server import __version__
+        assert f"v{__version__}" in home.text
 
 
 def test_api_requires_auth(tmp_path):

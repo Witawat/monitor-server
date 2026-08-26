@@ -189,7 +189,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             and verify_session(request.app.state.session_secret, cookie)
         )
         template = "base.html" if authed else "login.html"
-        return _TEMPLATES.TemplateResponse(request, template)
+        return _TEMPLATES.TemplateResponse(request, template, {"version": __version__})
 
     @app.get("/api/health")
     async def health() -> JSONResponse:
