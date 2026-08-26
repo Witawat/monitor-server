@@ -1,8 +1,9 @@
 # CONFIG.md — server config.toml
 
 ## ตำแหน่ง
+- **exe (production)**: ข้าง `monitor-server.exe` (`dist\`) — อัตโนมัติ ไม่ต้องสั่ง `--config`; รันครั้งแรกสร้าง default + พิมพ์รหัสผ่าน admin
 - dev: `./config.toml` (รากโปรเจกต์) — gitignore แล้ว, ใช้ `config.example.toml` เป็นต้นแบบ
-- service: ข้าง `run.py` / ไดเรกทอรี install
+- service: ข้าง exe / ไดเรกทอรี install
 
 > ใช้ **TOML** — อ่านง่าย (แบบ pyproject), รองรับ comment, Python 3.11 อ่านด้วย stdlib `tomllib` (ไม่ต้องลง dep แยก). Server validate ด้วย pydantic หลัง parse.
 
@@ -65,16 +66,19 @@ allow_registration = true      # agent ใหม่ push ครั้งแร�
 
 ## Agent config (arg/env/ไฟล์ agent.cfg)
 ```powershell
+# PRODUCTION (exe) — ไม่ต้องมี python
+monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+# DEV (มีซอร์ส)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 # env: MONITOR_SERVER_URL / MONITOR_TOKEN / MONITOR_INTERVAL / MONITOR_PORTS / MONITOR_WATCH
 
 # ติดตั้งเป็น service อัตโนมัติ — เขียน agent.cfg (ข้าง exe/runtime) + สร้าง service ให้เอง
-python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx
+monitor-agent.exe --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx [--max-batch 100]
 # ลบ service
-python -m agent.agent --uninstall
+monitor-agent.exe --uninstall
 ```
 - `agent.cfg` (INI) — ค่าที่ `--install` เขียน; agent อ่านอัตโนมัติเมื่อรันโดยไม่ใส่ args
-- ลำดับความสำคัญ: `--server/--token/--interval` (arg) > `MONITOR_*` (env) > `agent.cfg` (ไฟล์) > default
+- ลำดับความสำคัญ: `--server/--token/--interval/--max-batch` (arg) > `MONITOR_*` (env) > `agent.cfg` (ไฟล์) > default
 
 ## การ gen bcrypt hash
 ```powershell

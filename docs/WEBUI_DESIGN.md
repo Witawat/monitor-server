@@ -394,8 +394,8 @@ new Chart(ctx, {
 ---
 
 ## 14. คำแนะนำเพิ่มเติม (ทำได้ทีหลัง)
-- **SSE realtime** — แทน poll: `/api/v1/events` push ค่าใหม่ (fleet + chart สดขึ้นทันที)
+- **SSE realtime** — แทน poll (ปัจจุบัน poll Fleet 10s + Host 5s/1นาที): `/api/v1/events` push ค่าใหม่ (fleet + chart สดขึ้นทันที) — ทางเลือกถ้าต้องการ push ต่อ
 - **ธีมมืด** — เพิ่ม `data-theme="dark"` สลับ tokens (ยังใช้ `--` variables เดิม)
 - **Export CSV** — ปุ่มต่อ metric/range (API มีแล้วใน `API.md`)
-- **Mini-map** — sparkline เล็กใน HostCard (Chart.js mini) เห็นแนวโน้มโดยไม่ต้องเข้า host
+- **Mini-map** — sparkline เล็กใน HostCard (มีแล้วสำหรับ Fleet) ขยายให้ครบ metric
 - **แจ้งเตือน popup** — toast ด้านขวาบนเมื่อ alert trigger (webhook → SSE ถึงเบราว์เซอร์)

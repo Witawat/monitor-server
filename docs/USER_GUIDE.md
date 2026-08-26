@@ -145,6 +145,7 @@ Agent คือตัวที่ติดตั้งบน **เครื่�
 | `--interval` | รอบเก็บข้อมูล (วินาที) | `15` |
 | `--watch` | service/process ที่เฝ้าดู | `nginx,mysql` |
 | `--ports` | TCP port ที่เฝ้าดูว่าเปิด/ปิด | `80:web,443:https` |
+| `--max-batch` | จำนวน snapshot สูงสุดต่อ request (default 100) | `100` |
 | `--install` | ติดตั้งเป็น service + เขียน agent.cfg | — |
 | `--uninstall` | ลบ service | — |
 | `--config` | ชี้ไฟล์ agent.cfg | `agent.cfg` |
@@ -206,6 +207,7 @@ dist\monitor-agent.exe --install --server http://... --token <TOKEN> --interval 
 ### 5.2 Host (รายละเอียดรายเครื่อง)
 
 - เลือก host จาก **dropdown** (หรือคลิกการ์ดใน Fleet)
+- **Realtime อัตโนมัติ**: KPI / services / ports / กราฟ **อัปเดตเองทุก ~5 วิ** (range 1h/6h) หรือ 1 นาที (range กว้าง) — ไม่ต้องรีเฟรชมือ (Fleet card poll ทุก 10 วิ)
 - **KPI**: CPU / RAM / Disk / Uptime (สีเปลี่ยนตาม threshold: ≥80 เหลือง, ≥90 แดง)
 - **Alert ล่าสุด**: แจ้ง alert ที่เพิ่งเกิดของ host นี้
 - **Services**: badge แสดง service ทำงาน/หยุด (ถ้าตั้ง `--watch`)

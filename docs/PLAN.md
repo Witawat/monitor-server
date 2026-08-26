@@ -16,7 +16,7 @@
 | 5 | Build + Service (systemd/NSSM) + QA | ✅ |
 | งานเสริม | tags, service watch, export CSV, host-down notify, rate-limit login + CSP | ✅ |
 
-**ลำดับตรวจทุกเฟส:** `ruff check .` → `mypy server agent shared` → `pytest -q`
+**ลำดับตรวจทุกเฟส:** `ruff check .` → `mypy --disable-error-code=unused-ignore server agent shared` → `pytest -q`
 
 ---
 
@@ -161,4 +161,6 @@
 - [x] L2 cookie Secure flag (`webui.secure_cookie`, เปิดเมื่อ HTTPS)
 - [x] L4 disk % ใช้ `f_bavail` (เหมือน df)
 - [x] BUILD.md เพิ่มส่วน build exe (build.ps1 + icon + UPX) + bump version 0.2.0 + CHANGELOG
-- [ ] (optional ยังไม่ทำ) dark theme, SSE realtime, mini-map sparkline, popup แจ้งเตือน
+- [x] Host realtime auto-refresh (poll ทุก 5s / range กว้าง 1 นาที) + Fleet poll 10s
+- [x] CI (ruff+mypy+pytest py3.11/3.12) + release auto (tag `v*` → build exe + release) + README badges
+- [ ] (optional ยังไม่ทำ) dark theme, SSE realtime (ย้ายจาก poll), mini-map sparkline, popup แจ้งเตือน

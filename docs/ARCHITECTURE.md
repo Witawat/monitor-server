@@ -50,7 +50,7 @@
 | `server/alerting/` | ประเมิน alert rules หลัง ingest + ส่ง notify | webhook/Telegram |
 | `server/api/auth.py` | login WebUI (bcrypt + HttpOnly cookie), token gen/revoke | |
 | `server/webui/` | Jinja2 SPA + static (Chart.js local) | กฎใน `WEBUI_DESIGN.md` |
-| `agent/agent.py` | collect (stdlib) + push loop + retry/backoff + queue | entry: `python -m agent.agent` |
+| `agent/agent.py` | collect (stdlib) + push loop + retry/backoff + queue | entry: `monitor-agent.exe` (prod) หรือ `python -m agent.agent` (dev) |
 | `agent/config.py` | server_url + token + interval (arg/env) | |
 | `shared/metric.py` | metric snapshot schema + contract | บางพอให้ agent ใช้ |
 

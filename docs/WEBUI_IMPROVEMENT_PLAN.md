@@ -272,7 +272,7 @@
 
 ## เกณฑ์ตรวจก่อนถือว่าเสร็จ (ใช้ทุกข้อ)
 
-- [ ] `ruff check .` + `mypy server agent shared` ผ่าน
+- [ ] `ruff check .` + `mypy --disable-error-code=unused-ignore server agent shared` ผ่าน
 - [ ] `pytest -q` ผ่าน
 - [ ] (ถ้าเปลี่ยน JS/CSS/template) verify ด้วย Playwright: ไปทุกหน้า, ไม่ overflow 360/768/1280, **console 0 error**
 - [ ] (ถ้าเปลี่ยน server API) rebuild exe + `scripts\test_exe.ps1` 13 checks ผ่าน

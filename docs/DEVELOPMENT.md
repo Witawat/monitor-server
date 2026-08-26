@@ -33,8 +33,9 @@ Invoke-RestMethod http://127.0.0.1:18080/api/v1/hosts -Headers @{"X-Agent-Token"
 
 ## เทส (สำคัญ)
 ```powershell
-ruff check .; mypy server agent shared; pytest -q
+ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytest -q
 ```
+> ฉันว่า mypy ต้องมี `--disable-error-code=unused-ignore` — โค้ด cross-platform (ctypes.windll/os.statvfs) ฟ้องถูก/ผิดคนละที่ตาม platform ที่รัน (ตรงกับ CI)
 
 ### กฎการเทส
 - **server**: ingest เทสด้วย **mock** — ไม่พึ่ง server จริง
@@ -45,11 +46,17 @@ ruff check .; mypy server agent shared; pytest -q
 
 ### โฟลเดอร์เทส
 ```
-tests/
-├── server/          # test_ingest.py (mock), test_storage.py, test_alerts.py, test_api.py
-├── agent/           # test_push.py, test_retry_backoff.py (fake HTTP), test_collect.py
-└── integration/     # (ไม่ใน pytest -q) — agent → server จริง
+tests/                          # pytest แบน (testpaths = ["tests"])
+├── test_ingest.py              # IngestService (mock)
+├── test_storage.py             # Database
+├── test_alerts.py              # AlertEngine / Notifier / ack
+├── test_api.py / test_api_status.py / test_webui.py
+├── test_collect.py / test_push.py / test_retry_backoff.py / test_selfinstall.py
+├── test_config.py / test_extras.py
+└── __init__.py
 ```
+- เทส server ใช้ **mock** (ไม่พึ่ง server จริง) · เทส agent ใช้ **fake HTTP server** (`http.server`/`httpx MockTransport`) — **ห้ามยิง server จริง**
+- e2e (agent→server จริง) แยกเป็น integration — ไม่อยู่ใน `pytest -q` · เทส exe ใช้ `scripts/test_exe.ps1` (13 checks)
 
 ### เทส UI (Playwright — ตรวจ responsive ตาม `WEBUI_DESIGN.md`)
 - ตรวจ 360/768/1280 ไม่ overflow แนวนอน + ฟังก์ชันหลัก (login, fleet→host, chart, settings)
@@ -67,5 +74,7 @@ tests/
 ```
 
 ## งานที่ควรทำเป็นประจำ
-- รัน `ruff`/`mypy`/`pytest` ก่อน commit ทุกครั้ง
+- รัน `ruff --check`/`mypy --disable-error-code=unused-ignore`/`pytest` ก่อน commit ทุกครั้ง (ตรงกับ CI)
+- CI วิ่งอัตโนมัติบน push/PR (`ruff`+`mypy`+`pytest` py3.11/3.12) — ดู `.github/workflows/ci.yml`
+- release: push tag `v*` → `release.yml` สร้าง exe + publish release อัตโนมัติ
 - ใช้ `run-long.ps1` ถ้ารันคำสั่งที่อาจนาน (test suite ใหญ่/build)

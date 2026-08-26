@@ -6,7 +6,7 @@
 
 - **ภาษา comment/docstring: ไทย** — ใช้ศัพท์เทคนิคภาษาอังกฤษเท่าที่จำเป็น (ชื่อคลาส/method/library)
 - ยึด **PEP 8** (format) + **PEP 257** (docstring)
-- ใช้ `ruff` + `mypy` เป็นเกณฑ์บังคับ — `ruff check .; mypy server agent shared; pytest -q` ต้องผ่านก่อน PR
+- ใช้ `ruff` + `mypy` เป็นเกณฑ์บังคับ — `ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytest -q` ต้องผ่านก่อน PR
 
 ## 2. ชื่อ (naming)
 
@@ -178,7 +178,7 @@ class Snapshot(BaseModel):
 
 ```powershell
 ruff check .          # format + lint
-mypy server agent shared   # type check
+mypy --disable-error-code=unused-ignore server agent shared   # type check
 pytest -q             # test
 ```
 - แก้ comment/docstring อย่างเดียว = ไม่กระทบ logic → ไม่ต้อง rebuild service แต่ยังต้องผ่าน ruff/mypy/pytest

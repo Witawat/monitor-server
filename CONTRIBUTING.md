@@ -16,12 +16,13 @@
 1. fork + branch (`feat/...`, `fix/...`)
 2. เขียนโค้ดตาม `CODING_GUIDE.md` (docstring ครบ public + inline comment แบบ why)
 3. เขียน/แก้ test — เทส server ด้วย mock, เทส agent ด้วย fake HTTP (ห้ามยิง server จริง)
-4. รันผ่านให้ครบก่อน PR:
+4. รันผ่านให้ครบก่อน PR (ตรงกับ CI ที่รันบน py3.11/3.12):
    ```powershell
    ruff check .
-   mypy server agent shared
+   mypy --disable-error-code=unused-ignore server agent shared
    pytest -q
    ```
+   > mypy ต้องมี `--disable-error-code=unused-ignore` เพราะโค้ด cross-platform (ctypes.windll/os.statvfs ฟ้องคนละที่ตาม platform)
 5. อัปเดต `CHANGELOG.md` (ย้ายไป section ของเวอร์ชัน)
 6. PR พร้อมคำอธิบายสั้นๆ ว่าทำอะไร + ผลตรวจผ่าน
 
@@ -29,4 +30,5 @@
 - ดู `docs/DEVELOPMENT.md` — ล้าง `data/`+`logs/`, kill process ค้างก่อนเทส
 
 ## Release
-- รอผู้ดูแลจัดการ version bump + tag (SemVer) — ดู `AGENTS.md`
+- CI วิ่งอัตโนมัติบนทุก push/PR (`.github/workflows/ci.yml`)
+- release อัตโนมัติ: เมื่อ push tag `v*` → วิ่ง `release.yml` สร้าง exe + publish release. ใช้: `git tag v0.3.0 && git push origin v0.3.0` (รอผู้ดูแลยืนยัน version bump + tag)

@@ -85,7 +85,8 @@ python -m server.main --config config.toml            # เปิด http://127.
 # agent (dev — ชี้ไป server ตัวเอง, token จาก WebUI)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 ```
-```
+
+> 💡 **production ใช้ exe ด้านบน** — ตัว `--config config.toml` ที่เห็นในโหมด dev ไม่จำเป็นสำหรับ exe (exe อ่าน config ข้างตัวเองอัตโนมัติ)
 
 ## Build EXE (server + agent)
 

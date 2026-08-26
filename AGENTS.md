@@ -60,8 +60,8 @@ python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval
 python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 python -m agent.agent --uninstall
 
-# ตรวจก่อนส่งงาน (ต้องผ่านหมดก่อน PR)
-ruff check .; mypy server agent shared; pytest -q
+# ตรวจก่อนส่งงาน (ต้องผ่านหมดก่อน PR — CI ก็รันชุดนี้บน py3.11/3.12)
+ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytest -q
 
 # build EXE (server + agent onefile + icon monitor + UPX ล่าสุด)
 scripts\build.bat        # ตัวหลัก — รันตรงได้เลย (สร้าง icon + PyInstaller + UPX)
@@ -123,13 +123,13 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 ## กฎ WebUI
 - WebUI เป็น single-page (SPA) แบบ **long page** — `templates/base.html` + `templates/parts/*.html` (ใช้ `{% include %}`) — ทุก section แสดงพร้อมกันเลื่อนยาว, **ไม่มี sidebar** (เมนูนำทาง Fleet/Alerts/ตั้งค่า เป็น `.topnav` แนวนอนใน topbar), คลิก host card → เลือก host + scroll ไป section Host (host select ใน toolbar)
 - JS แยกโมดูลใน `static/js/` (`app`/`dashboard`/`alerts` + `scale`/`format`/`i18n`) — format ตัวเลข/หน่วยรวมใน `format.js` (ห้ามแต่ละหน้าเขียนเอง) · UI scale ทั้งกรอบด้วย `zoom` + `scale.js`
-- dashboard realtime: เลือก host → poll `/api/v1/hosts/{id}/metrics?range=1h` (หรือ SSE ถ้าจะ push) + Chart.js
+- dashboard realtime: เลือก host → **poll ทุก 5s** `/api/v1/hosts/{id}` + `/api/v1/hosts/{id}/metrics?range=1h` (range 1h/6h; range กว้าง 7d+ poll 1 นาที) + Chart.js; Fleet card poll `/api/v1/hosts` ทุก 10s — (SSE เป็นทางเลือกถ้าจะ push ต่อ)
 - chart: เลือก metric ทีละตัว (chip selector) + range (1h/6h/1d/7d/30d/45d) — y-axis ตั้งชื่อตาม unit, ค่า format ผ่าน format.js (ไม่ plot ทุก metric รวมกัน กันสเกลเพี้ยน)
 - input/select/textarea/checkbox **ทุกตัวต้องสไตล์เดียวกัน** (rules ใน app.css `input, select, textarea, button`) — ห้ามวิธีเฉพาะแต่ละตัวจนต่างแบบ (ดู `WEBUI_DESIGN.md` §8.0)
 - API อยู่ใต้ `/api/*` — ห้ามชน static · Auth หน้า WebUI (admin user/pass, bcrypt, HttpOnly cookie)
 - กฎ UI ยึด `docs/WEBUI_DESIGN.md` — responsive 360/768/1280, `font-size: clamp`, Chart.js bundle local (ไม่ใช้ CDN)
 
-## ข้อแนะนำเพิ่มเติม (จากโจทย์ "แนะนำเพิ่มได้")
+## ข้อแนะนำเพิ่มเติม (จากโจทย์ "แนะนำเพิ่มได้") — ทำครบแล้ว
 - alerting + notify (webhook/Telegram) + alert history + ack
 - กราฟย้อนหลังแบบ rollup (1m/5m/1h/1d) + export CSV
 - ติดตาม service/process บน host (agent เช็ค up/down)
@@ -137,6 +137,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - uptime/availability + offline detection + notification เมื่อ host หาย
 - API token per host + revoke; audit log การเข้า WebUI
 - (แนะนำ) rate-limit login + CSP/security headers WebUI
+- CI (`.github/workflows/ci.yml`) + release auto (`release.yml`) + README badges
 
 ## สิ่งที่ห้ามทำ
 - ห้ามใช้ `npm`/`node`/`React` บน WebUI — ล็อกเป็น Jinja2 + vanilla JS แล้ว

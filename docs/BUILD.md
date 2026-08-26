@@ -2,7 +2,8 @@
 
 ## Server (รันจาก source หลัก)
 - dev: `python -m server.main --config config.toml` หรือ `python run.py --config config.toml`
-- production: รันผ่าน service (`docs/DEPLOYMENT.md`) — ไม่ต้อง build ไฟล์พิเศษ
+- production (exe): `monitor-server.exe` — **ไม่ต้องสั่ง `--config`** (อ่าน `config.toml` ข้าง exe อัตโนมัติ; ไม่มีก็สร้าง default + พิมพ์รหัสผ่าน admin)
+- production (service): รันผ่าน service (`docs/DEPLOYMENT.md`) — ไม่ต้อง build ไฟล์พิเศษ
 - dependencies: `requirements.txt` (fastapi, uvicorn, jinja2, pydantic, aiosqlite, bcrypt, python-multipart, httpx) — config TOML อ่านด้วย stdlib `tomllib` ไม่ต้องลง dep แยก
 
 ## Agent (package ตัวเล็ก)
@@ -57,6 +58,11 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 - **UPX**: ดาวน์โหลด release ล่าสุด → `scripts/tools/upx/upx.exe` (build tool — gitignore ไม่ติด commit) แล้วบีบ exe ด้วย `--upx-dir`
 - ตรวจหลัง build: `dist\monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15` + รัน `dist\monitor-server.exe` แล้วเปิด WebUI
 - **ทดสอบ exe ครบทุกอย่างอัตโนมัติ**: `scripts\test_exe.bat` (หรือ `scripts\test_exe.ps1 -Port 18089`) — ตรวจ 13 ข้อ (health/WebUI/login/static + API ingest/hosts/tags/metrics/alerts CRUD/export CSV + agent exe push) ด้วย config/data_dir ชั่วคราว แล้วล้างเอง
+
+## CI / Release อัตโนมัติ (GitHub Actions)
+- **CI** (`.github/workflows/ci.yml`): `ruff` + `mypy --disable-error-code=unused-ignore` + `pytest` บน **py3.11/3.12** ทุก push/PR → master (กัน regression)
+- **Release** (`.github/workflows/release.yml`): push tag `v*` → วิ่งบน `windows-latest` → venv + `pip install -r requirements.txt -r requirements-build.txt` → `scripts\build.bat` (icon+UPX+PyInstaller) → `gh release create` + upload `dist\monitor-server.exe` + `dist\monitor-agent.exe`
+- วิธีใช้: `git tag v0.3.0 && git push origin v0.3.0` (หลัง bump version ใน `pyproject.toml` + `CHANGELOG.md`)
 
 ## เกณฑ์
 - agent ห้ามมี dependency หนัก — ถ้าใช้ PyInstaller ต้องตรวจ size ≤ ~15MB และรันบนเครื่องไม่มี Python

@@ -70,6 +70,11 @@ nssm start MonitorAgent
 - `scripts/install-agent.ps1` / `.sh` — สร้าง service agent
 - ใช้ pathlib/os.path ในโค้ด; script รับ param server_url + token
 
+## CI / Release
+- CI วิ่งบนทุก push/PR (`.github/workflows/ci.yml`) — `ruff`+`mypy`+`pytest` py3.11/3.12 (กัน regression)
+- release: push tag `v*` → `release.yml` build `monitor-server.exe` + `monitor-agent.exe` (Windows) + publish release พร้อมแนบ exe (`gh release`)
+- หลัง bump version ใน `pyproject.toml`/`CHANGELOG.md` → `git tag v0.3.0 && git push origin v0.3.0`
+
 ## สิ่งที่ต้องระวัง
 - `config.toml`/`.env`/`*.pem`/`*.key`/`data/*.db`/`logs/` — **ห้าม commit**
 - server: เปิดพอร์ต (18080) — ถ้า agent อยู่หลัง NAT ก็ push เข้ามาได้ (push model)
