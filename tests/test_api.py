@@ -260,3 +260,41 @@ def test_notifier_webhook_test_requires_url(tmp_path):
 
     with _client(tmp_path) as c:
         assert c.post("/api/v1/settings/notifiers/webhook/test", json={"url": ""}).status_code == 400
+
+
+def test_telegram_scan_chatid(tmp_path, monkeypatch):
+    """ดึง chat_id อัตโนมัติจาก getUpdates (mock httpx.AsyncClient)."""
+
+    captured: dict = {}
+
+    class _FakeResp:
+        status_code = 200
+        text = "{}"
+        headers = {"content-type": "application/json"}
+
+        def json(self):
+            return {"result": [{"message": {"chat": {"id": -100123456789}}}]}
+
+    class _FakeAC:
+        def __init__(self, *a, **k):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):  # noqa: ANN002
+            return False
+
+        async def get(self, url, **kw):
+            captured["url"] = url
+            captured["params"] = kw.get("params")
+            return _FakeResp()
+
+    monkeypatch.setattr("httpx.AsyncClient", _FakeAC)
+    with _client(tmp_path) as c:
+        r = c.post("/api/v1/settings/notifiers/telegram/chatid", json={"bot_token": "1:AAA"})
+        body = r.json()
+        assert body["ok"] is True
+        assert body["chat_id"] == "-100123456789"
+        assert "getUpdates" in captured["url"]
+        assert captured["params"]["offset"] == -1

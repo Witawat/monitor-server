@@ -309,11 +309,11 @@ select { appearance: auto; }
 .secret-wrap input { flex: 1; padding-right: 48px; }
 .eye-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-2); cursor: pointer; font-size: 0.75rem; padding: 4px 6px; }
 .link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.82rem; padding: 0; text-decoration: underline; }
-.helper-box { background: var(--surface-2, #0f1622); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; margin: 6px 0; }
+.helper-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; margin: 6px 0; }
 .helper-box ol { margin: 0; padding-left: 18px; line-height: 1.7; }
 .helper-box code { font-size: 0.78rem; }
 .wiz-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 14px 0; }
-.wiz-opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; background: var(--surface-2, #0f1622); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font: inherit; color: inherit; }
+.wiz-opt { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font: inherit; color: inherit; box-shadow: var(--shadow); }
 .wiz-opt:hover { border-color: var(--accent); }
 .wiz-opt b { font-size: 1rem; }
 .wiz-opt small { color: var(--text-2); line-height: 1.4; }

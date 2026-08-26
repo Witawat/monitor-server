@@ -84,6 +84,9 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 ### `POST /api/v1/settings/notifiers/telegram/test` *(admin)*
 - body `{"bot_token":"...","chat_id":"..."}` → ตรวจ getMe + ส่งข้อความทดสอบ → `{"ok":bool,"status":int,"detail":str}` (ยังไม่บันทึก)
 
+### `POST /api/v1/settings/notifiers/telegram/chatid` *(admin)*
+- body `{"bot_token":"..."}` → **ดึง chat_id อัตโนมัติ** จาก `getUpdates` (ต้องเคยแชทกับบอท ≥ 1 ครั้ง) → `{"ok":true,"chat_id":"-100..."}` หรือ `{"ok":false,"detail":"..."}`
+
 ## Auth (WebUI)
 ### `POST /api/v1/auth/login`
 - Body: `{"username","password"}` → set HttpOnly cookie, `200 {"ok":true}`

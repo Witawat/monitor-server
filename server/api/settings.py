@@ -112,3 +112,40 @@ async def test_telegram(body: Annotated[dict[str, Any], Body()]) -> JSONResponse
         return JSONResponse(
             {"ok": False, "status": sent.status_code, "detail": _tg_error_detail(sent)}
         )
+
+
+@router.post("/notifiers/telegram/chatid")
+async def telegram_scan_chatid(body: Annotated[dict[str, Any], Body()]) -> JSONResponse:
+    """ดึง chat_id อัตโนมัติ (getUpdates) — ผู้ใช้ต้องเคยแชทกับบอทอย่างน้อย 1 ครั้ง."""
+
+    token = (body.get("bot_token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="ต้องระบุ bot_token")
+    async with httpx.AsyncClient(timeout=6.0) as client:
+        resp = await client.get(
+            f"https://api.telegram.org/bot{token}/getUpdates",
+            params={"offset": -1, "timeout": 1},
+        )
+        if resp.status_code != 200:
+            return JSONResponse(
+                {"ok": False, "status": resp.status_code, "detail": _tg_error_detail(resp)}
+            )
+        data = resp.json()
+        updates = data.get("result") or []
+        if not updates:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "status": 200,
+                    "detail": "ยังไม่มี chat — แชทกับบอท (กด Start) ก่อน แล้วลองอีกครั้ง",
+                }
+            )
+        upd = updates[-1]
+        msg = upd.get("message") or upd.get("channel_post") or upd.get("edited_message") or {}
+        chat = msg.get("chat") or {}
+        chat_id = chat.get("id")
+        if chat_id is None:
+            return JSONResponse(
+                {"ok": False, "status": 200, "detail": "หา chat_id ไม่เจอใน update ล่าสุด"}
+            )
+        return JSONResponse({"ok": True, "status": 200, "chat_id": str(chat_id)})

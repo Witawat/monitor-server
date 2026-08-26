@@ -264,6 +264,7 @@
     document.getElementById('webhookTestBtn').onclick = testWebhook;
     document.getElementById('telegramSaveBtn').onclick = saveChannel('telegram');
     document.getElementById('telegramTestBtn').onclick = testTelegram;
+    document.getElementById('telegramChatScanBtn').onclick = scanChatId;
     const eye = document.getElementById('telegramTokenEye');
     eye.onclick = () => {
       const inp = document.getElementById('telegramToken');
@@ -343,6 +344,24 @@
         body: JSON.stringify({ bot_token, chat_id }),
       });
       showResult('telegramResult', r.ok, r.ok ? 'ส่งข้อความทดสอบแล้ว' : (r.detail || 'ล้มเหลว'));
+    } catch (e) { showResult('telegramResult', false, e.message); }
+  }
+
+  async function scanChatId() {
+    const bot_token = document.getElementById('telegramToken').value.trim();
+    if (!bot_token) { toast('error', 'กรอก Bot Token ก่อน'); return; }
+    showResult('telegramResult', null, 'กำลังดึง Chat ID…');
+    try {
+      const r = await api('/api/v1/settings/notifiers/telegram/chatid', {
+        method: 'POST',
+        body: JSON.stringify({ bot_token }),
+      });
+      if (r.ok && r.chat_id) {
+        document.getElementById('telegramChat').value = r.chat_id;
+        showResult('telegramResult', true, 'ได้ Chat ID: ' + r.chat_id);
+      } else {
+        showResult('telegramResult', false, r.detail || 'ยังไม่พบ chat — แชทกับบอท (กด Start) ก่อน แล้วลองอีกครั้ง');
+      }
     } catch (e) { showResult('telegramResult', false, e.message); }
   }
 

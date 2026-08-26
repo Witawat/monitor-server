@@ -51,21 +51,27 @@
       <label class="field-label" for="telegramChat">Chat ID</label>
       <div class="notif-row">
         <input id="telegramChat" type="text" placeholder="-100123456789" autocomplete="off">
-        <button class="btn" id="telegramTestBtn">ทดสอบส่งข้อความ</button>
+        <button class="btn" id="telegramChatScanBtn">ดึง Chat ID อัตโนมัติ</button>
       </div>
       <p class="hint"><button type="button" class="link-btn" id="tgHelpToggle">วิธีหา Bot Token / Chat ID</button></p>
       <div class="helper-box" id="tgHelp" style="display:none">
+        <p><b>Bot Token</b> — สร้างเองได้ที่เดียว (ทำอัตโนมัติไม่ได้):</p>
         <ol>
-          <li>ใน Telegram ค้นหา <code>@BotFather</code> → สร้างบอทด้วย <code>/newbot</code> → ได้ <b>Bot Token</b></li>
-          <li>แชทกับบอทของคุณ (กด Start) เพื่อสร้าง chat</li>
-          <li>หา <b>Chat ID</b>: ส่งข้อความไปบอท แล้วเปิด
-            <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> ในเบราว์เซอร์
-            → อ่านค่า <code>"chat":{"id": ...</code> (ห้องกลุ่มให้ติดเครื่องหมายลบ เช่น <code>-100123456789</code>)</li>
+          <li>ใน Telegram ค้นหา <code>@BotFather</code> → สร้างบอทด้วย <code>/newbot</code></li>
+          <li>คัดลอก <b>Bot Token</b> ที่ได้ (รูปแบบ <code>123456:ABC-...</code>) มากรอกช่องบน</li>
         </ol>
+        <p><b>Chat ID</b> — ดึงอัตโนมัติได้ 3 ขั้นตอน:</p>
+        <ol start="3">
+          <li>แชทกับบอทของคุณ (กด <b>Start</b>) อย่างน้อย 1 ครั้ง — เพื่อสร้าง chat</li>
+          <li>กรอก <b>Bot Token</b> แล้วกด <b>“ดึง Chat ID อัตโนมัติ”</b> → ค่าจะถูกกรอกให้เอง</li>
+          <li>ถ้ายังดึงไม่ได้ = ยังไม่ได้แชทกับบอท → กด Start แล้วลองอีกครั้ง</li>
+        </ol>
+        <p style="margin-bottom:0">หรือหาเองด้วยมือ: เปิด <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> ในเบราว์เซอร์ → อ่านค่า <code>"chat":{"id": ...</code> (ห้องกลุ่มให้ติดเครื่องหมายลบ เช่น <code>-100123456789</code>)</p>
       </div>
       <div class="notif-row">
         <label class="check"><input type="checkbox" id="telegramEnabled"> เปิดใช้งาน</label>
         <span class="spacer"></span>
+        <button class="btn" id="telegramTestBtn">ทดสอบส่งข้อความ</button>
         <button class="btn primary" id="telegramSaveBtn">บันทึก</button>
       </div>
       <p class="notif-result" id="telegramResult"></p>

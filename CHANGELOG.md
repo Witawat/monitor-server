@@ -8,6 +8,7 @@
 
 ### เพิ่ม
 - **ตั้งค่า Webhook / Telegram ผ่าน WebUI** (หน้า ตั้งค่า → การแจ้งเตือน): การ์ด 2 ช่องทาง + ปุ่มทดสอบ (webhook POST จริง / telegram ส่งข้อความทดสอบ) + toggle เปิด/ปิด + badge สถานะ + ตัวช่วยหา Bot Token/Chat ID — เก็บใน DB (`state_kv`), มีผลทันทีไม่ต้อง restart, config.toml เดิมเป็นค่าเริ่มต้น (fallback)
+- **ดึง Chat ID อัตโนมัติ** (ปุ่มใน Telegram card): ใช้ getUpdates — กรอก Bot Token แล้วกดปุ่ม ได้ chat_id เอง (ต้องเคยแชทกับบอท ≥ 1 ครั้ง); ตัวช่วยอธิบายว่า Bot Token ต้องสร้างเองผ่าน @BotFather
 - **Wizard ตั้งค่าการแจ้งเตือนครั้งแรก**: ยังไม่ตั้งค่าช่องใด → modal เลือกช่องทาง แล้วพาไปกรอกค่าทีละขั้น (scroll + highlight + focus)
 - หน้า Alerts: checkbox webhook/telegram ต่อกฎ แสดง hint "(ยังไม่ได้ตั้งค่า)" ถ้าช่องนั้นยังไม่ตั้งค่า
 - WebUI เป็นหน้าเดียวเลื่อนยาว (long page) — ไม่มี sidebar, เมนูนำทาง (Fleet/Alerts/ตั้งค่า) เป็น topnav แนวนอนใน topbar, คลิกการ์ด → เลือก host + scroll ไป section Host
