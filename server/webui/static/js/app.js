@@ -245,6 +245,8 @@
     document.getElementById('filterOffline').onclick = () => setOnlineFilter(false);
     const refresh = document.getElementById('refreshBtn');
     if (refresh) refresh.onclick = () => loadFleet();   // 7.3: รีเฟรชมือ
+    const addHost = document.getElementById('addHostBtn');
+    if (addHost) addHost.onclick = () => window.Dashboard.openAddHostModal();   // วิซาร์ดเพิ่มเครื่องใหม่
     await loadFleet();
     loadTags();
     await initAll();

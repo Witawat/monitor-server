@@ -63,6 +63,31 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="addHostModal" role="dialog" aria-modal="true">
+  <div class="modal modal-wide">
+    <h2>เพิ่มเครื่องใหม่ (Agent)</h2>
+    <p class="install-note">กำหนดค่า agent สำหรับเครื่องใหม่ แล้วคัดลอกคำสั่งไปรันบนเครื่องนั้น (ไม่ต้องมี Python — ไฟล์ config/data อยู่ข้าง exe)</p>
+    <div class="wizard-grid">
+      <div class="field"><label for="addHostId">host_id</label><input id="addHostId" placeholder="เช่น web-01 / db-01"></div>
+      <div class="field"><label for="addInterval">interval (วินาที)</label><input id="addInterval" type="number" value="15" min="1"></div>
+      <div class="field"><label for="addWatch">watch (service/process)</label><input id="addWatch" placeholder="เช่น nginx,mysql (คั่น ,)"></div>
+      <div class="field"><label for="addPorts">ports (TCP ที่เฝ้า)</label><input id="addPorts" placeholder="เช่น 80:web,443:https (คั่น ,)"></div>
+      <div class="field"><label for="addMaxBatch">max-batch</label><input id="addMaxBatch" type="number" value="100" min="1"></div>
+    </div>
+    <div class="install-step"><b>token:</b> สร้างโดยอัตโนมัติจาก host_id (แสดงครั้งเดียว)</div>
+    <div class="toolbar install-tools">
+      <span id="addHostMsg" style="font-size:0.8125rem;color:var(--text-2)">ยังไม่สร้าง token</span>
+    </div>
+    <div class="install-step"><b>คำสั่งติดตั้ง:</b></div>
+    <pre class="install-cmd" id="addCmd">monitor-agent.exe --install --server &lt;URL&gt; --token &lt;TOKEN&gt; --interval 15 ...</pre>
+    <div class="actions">
+      <button class="btn primary" id="addBuildCmd">สร้าง token + พิมพ์คำสั่ง</button>
+      <button class="btn" id="copyAddCmd">คัดลอกคำสั่ง</button>
+      <button class="btn" id="addHostClose">ปิด</button>
+    </div>
+  </div>
+</div>
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script src="/static/js/chart.umd.min.js"></script>

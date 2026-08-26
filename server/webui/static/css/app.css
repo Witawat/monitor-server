@@ -164,6 +164,9 @@ td.actions .btn { margin-left: 6px; }
 .install-tools { margin: 8px 0; }
 .install-tools input { flex: 1; min-width: 0; }
 .install-cmd { background: #eef0f5; color: var(--text); padding: 12px; border-radius: 8px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; overflow-x: auto; margin: 8px 0 0; }
+.wizard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 4px 0 8px; }
+@media (max-width: 600px) { .wizard-grid { grid-template-columns: 1fr; } }
+.wizard-grid .field { margin-bottom: 0; }
 
 /* ── login ── */
 .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }

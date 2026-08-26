@@ -452,5 +452,57 @@
       ' --interval 15 [--ports 80:web,443:https] [--watch nginx]';
   }
 
-  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect, renderFleetStats };
+  // ── วิซาร์ด "เพิ่มเครื่องใหม่" — ระบุ option ครบ (interval/watch/ports/max-batch) ──
+  function openAddHostModal() {
+    const modal = document.getElementById('addHostModal');
+    if (!modal) return;
+    modal.classList.add('show');
+    document.getElementById('addCmd').textContent = 'monitor-agent.exe --install --server ' + location.origin + ' --token <TOKEN> --interval 15 ...';
+    document.getElementById('addHostMsg').textContent = 'ยังไม่สร้าง token';
+    const any = ['addHostId', 'addInterval', 'addWatch', 'addPorts', 'addMaxBatch'];
+    any.forEach((id) => { const el = document.getElementById(id); if (el) el.oninput = () => updateAddCmd(); });
+    document.getElementById('addBuildCmd').onclick = async () => {
+      const hid = document.getElementById('addHostId').value.trim();
+      const msg = document.getElementById('addHostMsg');
+      const cmd = document.getElementById('addCmd');
+      if (!hid) { msg.textContent = 'ต้องระบุ host_id'; return; }
+      try {
+        const res = await api('/api/v1/auth/tokens', { method: 'POST', body: JSON.stringify({ host_id: hid }) });
+        msg.textContent = 'token ถูกสร้าง (แสดงครั้งเดียว)';
+        cmd.textContent = buildAddCmd(res.token);
+      } catch (e) { msg.textContent = e.message; }
+    };
+    document.getElementById('copyAddCmd').onclick = () => {
+      navigator.clipboard.writeText(document.getElementById('addCmd').textContent).then(() => toast('success', 'คัดลอกคำสั่งแล้ว'));
+    };
+    document.getElementById('addHostClose').onclick = () => modal.classList.remove('show');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+    updateAddCmd();
+  }
+
+  function updateAddCmd() {
+    const el = document.getElementById('addCmd');
+    if (el) el.textContent = buildAddCmd(document.getElementById('addHostMsg').textContent && document.getElementById('addBuildCmd').dataset.token ? document.getElementById('addBuildCmd').dataset.token : '');
+  }
+
+  function buildAddCmd(token) {
+    const hid = document.getElementById('addHostId').value.trim() || '<host_id>';
+    const interval = document.getElementById('addInterval').value || 15;
+    const watch = document.getElementById('addWatch').value.trim();
+    const ports = document.getElementById('addPorts').value.trim();
+    const maxBatch = document.getElementById('addMaxBatch').value || 100;
+    let c = 'monitor-agent.exe --install --server ' + location.origin + ' --token ' + (token || '<TOKEN>') +
+      ' --interval ' + interval + ' --watch ' + (watch || '<service>') + ' --ports ' + (ports || '<port:name>') +
+      ' --max-batch ' + maxBatch;
+    // บันทึก token ไว้ (updateAddCmd เรียกซ้ำได้โดยไม่ต้อง gen ใหม่)
+    document.getElementById('addBuildCmd').dataset.token = token;
+    return c;
+  }
+
+  function bindAddHost() {
+    const btn = document.getElementById('addHostBtn');
+    if (btn) btn.onclick = () => openAddHostModal();
+  }
+
+  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect, renderFleetStats, openAddHostModal };
 })();
