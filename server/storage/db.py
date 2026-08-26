@@ -467,7 +467,32 @@ class Database:
         d["disk_percent"] = await self._latest_disk_percent(host_id)
         d["disk_total"] = await self._latest_disk_total(host_id)
         d["net_rx"], d["net_tx"] = await self._latest_net_rate(host_id)
+        d["trend"] = await self._recent_cpu_trend(host_id)
+        d["services_down"] = await self._recent_services_down(host_id)
         return d
+
+    async def _recent_services_down(self, host_id: str) -> list[str]:
+        """คืนรายชื่อ service ที่หยุดใน snapshot ล่าสุด (สำหรับเตือนในการ์ด Fleet)."""
+
+        rows = list(
+            await self._require().execute_fetchall(
+                "SELECT name FROM service_samples WHERE host_id = ? AND up = 0 "
+                "AND ts = (SELECT MAX(ts) FROM service_samples WHERE host_id = ?) ORDER BY name",
+                (host_id, host_id),
+            )
+        )
+        return [str(r["name"]) for r in rows]
+
+    async def _recent_cpu_trend(self, host_id: str, limit: int = 24) -> list[float]:
+        """คืน cpu_percent ย้อนหลัง ~24 จุด ใช้ทำ sparkline ในการ์ด Fleet (ไม่ดัน payload ใหญ่)."""
+
+        rows = list(
+            await self._require().execute_fetchall(
+                "SELECT cpu_percent FROM metrics WHERE host_id = ? ORDER BY ts DESC LIMIT ?",
+                (host_id, limit),
+            )
+        )
+        return [float(r["cpu_percent"]) for r in reversed(rows)]
 
     async def _latest_disk_total(self, host_id: str) -> int:
         """คืน total bytes ของ mount แรกใน snapshot ล่าสุด (default 0)."""

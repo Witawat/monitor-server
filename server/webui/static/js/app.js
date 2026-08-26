@@ -86,6 +86,14 @@
   function scrollToSection(name) {
     const el = document.getElementById('view-' + name);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTitle(name);  // 7.2: title ตาม section
+  }
+
+  // 7.2: title ตาม section ที่ดูอยู่
+  const SECTION_TITLE = { fleet: 'Fleet', host: 'Host', alerts: 'Alerts', settings: 'ตั้งค่า' };
+  function setTitle(name) {
+    const base = SECTION_TITLE[name] ? SECTION_TITLE[name] + ' — Monitor' : 'Monitor';
+    document.title = base;
   }
   window.scrollToSection = scrollToSection;
 
@@ -165,6 +173,19 @@
     if (currentOnline === true) list = list.filter((h) => h.online);
     if (currentOnline === false) list = list.filter((h) => !h.online);
     Dashboard.renderFleetCards(list, getSearch(), currentTag);
+    updateFilterStatus();   // 7.1: แสดงว่ากำลังกรองอะไร
+  }
+
+  // 7.1: แถบเล็กแจ้งสถานะการกรอง (ออนไลน์/ออฟไลน์ + tag + search)
+  function updateFilterStatus() {
+    const parts = [];
+    if (currentOnline === true) parts.push('ออนไลน์');
+    if (currentOnline === false) parts.push('ออฟไลน์');
+    if (currentTag) parts.push('#' + currentTag);
+    const q = getSearch();
+    if (q) parts.push('"' + q + '"');
+    const el = document.getElementById('filterStatus');
+    if (el) el.textContent = parts.length ? 'กรอง: ' + parts.join(' · ') : '';
   }
 
   async function loadTags() {
@@ -221,6 +242,8 @@
     document.getElementById('filterAll').onclick = () => setOnlineFilter(null);
     document.getElementById('filterOnline').onclick = () => setOnlineFilter(true);
     document.getElementById('filterOffline').onclick = () => setOnlineFilter(false);
+    const refresh = document.getElementById('refreshBtn');
+    if (refresh) refresh.onclick = () => loadFleet();   // 7.3: รีเฟรชมือ
     await loadFleet();
     loadTags();
     await initAll();

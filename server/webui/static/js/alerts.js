@@ -2,6 +2,29 @@
 (function () {
   const { api, toast, confirmModal } = window.Monitor;
 
+  // แสดงข้อมูล server/config (read-only) ที่หน้า ตั้งค่า — จาก /api/status (M5.1)
+  function renderServerInfo(st) {
+    const wrap = document.getElementById('serverInfo');
+    if (!wrap) return;
+    const s = st.server || {};
+    const ing = st.ingest || {};
+    const sto = st.storage || {};
+    const items = [
+      ['version', st.version],
+      ['host:port', (s.host || '') + ':' + (s.port || '')],
+      ['data_dir', s.data_dir],
+      ['log_dir', s.log_dir],
+      ['host_count', st.host_count],
+      ['rate_limit/min', ing.rate_limit_per_min],
+      ['offline_timeout', ing.offline_timeout_sec + 's'],
+      ['retention (raw)', sto.retention_raw_days + ' วัน'],
+      ['rollup', (sto.rollup_intervals || []).join(', ')],
+    ];
+    wrap.innerHTML = items.map(([k, v]) =>
+      '<div class="info-item"><span class="info-label">' + escapeHtml(k) + '</span><span class="info-val">' + escapeHtml(v == null ? '—' : v) + '</span></div>'
+    ).join('');
+  }
+
   function fillRuleForm(r) {
     document.getElementById('ruleId').value = r && r.id ? r.id : '';
     document.getElementById('ruleName').value = r ? r.name : '';
@@ -65,10 +88,15 @@
         api('/api/v1/alerts/history'),
         api('/api/v1/hosts'),
       ]);
-      // เติมตัวเลือก host ในฟอร์มกฎ
+      // เติมตัวเลือก host ในฟอร์มกฎ + dropdown กรอง
       const hostSel = document.getElementById('ruleHost');
       hostSel.innerHTML = '<option value="">— ทุก host —</option>' +
         hosts.map((h) => '<option value="' + escapeHtml(h.host_id) + '">' + escapeHtml(h.hostname || h.host_id) + '</option>').join('');
+      const hostOpt = (h) => h.hostname || h.host_id;
+      const hostName = (id) => (id && hosts.find((h) => h.host_id === id)) ? hostOpt(hosts.find((h) => h.host_id === id)) : id;
+      const filt = document.getElementById('alertHostFilter');
+      filt.innerHTML = '<option value="">ทุก host</option>' +
+        hosts.map((h) => '<option value="' + escapeHtml(h.host_id) + '">' + escapeHtml(hostOpt(h)) + '</option>').join('');
       const body = document.getElementById('alertsBody');
       const tabRules = document.getElementById('tabRules');
       const tabHistory = document.getElementById('tabHistory');
@@ -79,18 +107,21 @@
       };
       const render = () => {
         const showRules = tabRules.classList.contains('active');
+        const hostF = filt.value;
+        const rulesF = hostF ? rules.filter((r) => !r.host_id || r.host_id === hostF) : rules;
+        const historyF = hostF ? history.filter((h) => h.host_id === hostF) : history;
         if (showRules) {
-          if (!rules.length) {
+          if (!rulesF.length) {
             body.innerHTML = '<p class="empty-note">ยังไม่มีกฎ alert</p>';
             return;
           }
           body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th><th></th></tr></thead><tbody>' +
-            rules.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id || 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td>' +
+            rulesF.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id ? hostName(r.host_id) : 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td>' +
               '<td><button class="btn" data-edit="' + r.id + '">แก้</button> <button class="btn danger" data-del="' + r.id + '">ลบ</button></td></tr>').join('') +
             '</tbody></table>';
           body.querySelectorAll('[data-edit]').forEach((btn) => {
             btn.onclick = () => {
-              const r = rules.find((x) => x.id == btn.dataset.edit);
+              const r = rulesF.find((x) => x.id == btn.dataset.edit);
               if (r) fillRuleForm(r);
             };
           });
@@ -98,15 +129,15 @@
             btn.onclick = () => deleteRule(btn.dataset.del);
           });
         } else {
-          if (!history.length) {
+          if (!historyF.length) {
             body.innerHTML = '<p class="empty-note">ยังไม่มีประวัติ alert</p>';
             return;
           }
           body.innerHTML = '<table><thead><tr><th>เวลา</th><th>Host</th><th>Metric</th><th>ค่า</th><th></th></tr></thead><tbody>' +
-            history.map((h) =>
+            historyF.map((h) =>
               '<tr data-id="' + h.id + '" style="' + (h.ack ? 'opacity:.6' : '') + '">' +
               '<td>' + new Date(h.created_at * 1000).toLocaleString('th-TH') + '</td>' +
-              '<td>' + escapeHtml(h.host_id) + '</td><td>' + escapeHtml(h.metric) + '</td>' +
+              '<td>' + escapeHtml(hostName(h.host_id)) + '</td><td>' + escapeHtml(h.metric) + '</td>' +
               '<td>' + escapeHtml(h.value) + ' (เกิน ' + escapeHtml(h.threshold) + ')</td>' +
               '<td>' + (h.ack ? '<span class="badge online">ack ✓</span>' : '<button class="btn" data-ack="' + h.id + '">ack</button>') + '</td>' +
               '</tr>'
@@ -124,13 +155,18 @@
       };
       tabRules.onclick = () => { tabRules.classList.add('active'); tabHistory.classList.remove('active'); loadAlerts(); };
       tabHistory.onclick = () => { tabHistory.classList.add('active'); tabRules.classList.remove('active'); loadAlerts(); };
+      filt.onchange = () => render();   // กรองตาม host ที่เลือก (ไม่ต้อง reload)
       render();
     } catch (e) { toast('error', e.message); }
   }
 
   async function loadSettings() {
     try {
-      const tokens = await api('/api/v1/auth/tokens');
+      const [tokens, status] = await Promise.all([
+        api('/api/v1/auth/tokens'),
+        api('/api/status'),
+      ]);
+      renderServerInfo(status);
       const tbody = document.getElementById('tokenTable');
       if (!tokens.length) {
         tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-2)">ยังไม่มี host/token</td></tr>';

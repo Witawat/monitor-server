@@ -1,8 +1,10 @@
 // dashboard.js — fleet cards + host KPI + Chart.js (WEBUI_DESIGN.md §5-7)
 (function () {
   const { api, toast } = window.Monitor;
-  let currentRange = '1h';
-  let currentMetric = 'cpu_percent';
+  // 7.6: จำ range ที่ผู้ใช้เลือกไว้ใน localStorage
+  const savedRange = localStorage.getItem('monitor.range');
+  let currentRange = ['1h','6h','1d','7d','30d','45d'].includes(savedRange) ? savedRange : '1h';
+  let selectedMetrics = ['cpu_percent', 'memory.percent'];  // ค่า default: หน่วย % อ่านง่ายสุด
   let chart = null;
 
   // metric ที่ plot ได้ (ตรงกับ METRIC_COLUMNS มิติที่ไม่มี disk/net time-series)
@@ -20,8 +22,13 @@
     { key: 'uptime', label: 'Uptime', unit: 'sec' },
   ];
 
+  // palette สีของแต่ละ series (หลายเส้นต้องต่างกัน)
+  const PALETTE = ['var(--accent)', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d'];
+  function seriesColor(index) { return PALETTE[index % PALETTE.length]; }
+
+  function metricOf(key) { return METRICS.find((x) => x.key === key); }
   function unitOf(key) {
-    const m = METRICS.find((x) => x.key === key);
+    const m = metricOf(key);
     return m ? m.unit : 'num';
   }
 
@@ -70,7 +77,11 @@
       return okSearch && okTag;
     });
     if (!list.length) {
-      grid.innerHTML = '<p class="empty-note">' + I18N.noHost + '</p>';
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div>' +
+        '<p>' + I18N.noHost + '</p>' +
+        '<button class="btn" id="emptyInstallBtn">ดูวิธีติดตั้ง agent</button></div>';
+      const b = document.getElementById('emptyInstallBtn');
+      if (b) b.onclick = () => { window.open('docs/DEPLOYMENT.md', '_blank'); };
       return;
     }
     grid.innerHTML = list.map((h) => {
@@ -86,13 +97,22 @@
       const row = (label, pct) =>
         '<div class="metric-row"><div class="label"><span>' + label + '</span><span>' + formatPercent(pct) + '</span></div>' +
         '<div class="progress"><span style="width:' + (pct || 0) + '%;background:' + fillColor(pct || 0) + '"></span></div></div>';
+      const trend = (s.trend || []).length > 1 ? s.trend : null;
+      // 7.7: เตือน service ที่หยุด (จาก summary.services_down)
+      const downSvc = (s.services_down || []);
+      const downBadge = downSvc.length
+        ? '<div class="svc-warn">⚠ service หยุด: ' + downSvc.map((x) => escapeHtml(x)).join(', ') + '</div>'
+        : '';
       return '<div class="card' + (online ? '' : ' offline') + '" data-host="' + escapeHtml(h.host_id) + '">' +
         '<h3>' + osIcon(h.platform) + '<span class="host-name">' + escapeHtml(h.hostname || h.host_id) + '</span> ' + badge + '</h3>' + tags +
         row('CPU', s.cpu_percent) + row('RAM', s.mem_percent) + row('Disk', s.disk_percent) +
         net +
         '<div class="netline"><span>uptime ' + formatUptime(online ? s.uptime : null) + '</span></div>' +
+        downBadge +
+        (trend ? '<div class="spark-wrap"><canvas class="spark" data-host="' + escapeHtml(h.host_id) + '"></canvas></div>' : '') +
         '</div>';
     }).join('');
+    drawSparklines(list);
     grid.querySelectorAll('.card').forEach((card) => {
       card.onclick = () => {
         window.Monitor.setHostId(card.dataset.host);   // เลือก host + scroll to host section
@@ -101,17 +121,44 @@
     });
   }
 
+  // ── sparkline ใน Fleet card (mini Chart.js; destroy เก่ากัน leak ตอน poll) ──
+  const sparkCharts = [];
+  function clearSparklines() {
+    while (sparkCharts.length) { (sparkCharts.pop()).destroy(); }
+  }
+  function drawSparklines(hosts) {
+    clearSparklines();  // re-render ใหม่ทุกครั้ง
+    const trend = new Map(hosts.map((h) => [h.host_id, (h.summary || {}).trend || []]));
+    document.querySelectorAll('#hostGrid canvas.spark').forEach((canvas) => {
+      const pts = trend.get(canvas.dataset.host) || [];
+      if (pts.length < 2) return;
+      const last = pts[pts.length - 1];
+      const color = fillColor(last);
+      sparkCharts.push(new Chart(canvas, {
+        type: 'line',
+        data: { datasets: [{ data: pts, borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] },
+        options: {
+          responsive: false, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+        },
+      }));
+    });
+  }
+
   function renderKpi(summary) {
     const s = summary || {};
     const cells = [
-      ['CPU', formatPercent(s.cpu_percent), ''],
-      ['RAM', formatPercent(s.mem_percent), formatBytes(s.mem_total)],
-      ['Disk', formatPercent(s.disk_percent), formatBytes(s.disk_total || 0)],
-      ['Uptime', formatUptime(s.uptime), ''],
+      ['CPU', formatPercent(s.cpu_percent), '', s.cpu_percent],
+      ['RAM', formatPercent(s.mem_percent), formatBytes(s.mem_total), s.mem_percent],
+      ['Disk', formatPercent(s.disk_percent), formatBytes(s.disk_total || 0), s.disk_percent],
+      ['Uptime', formatUptime(s.uptime), '', null],
     ];
-    document.getElementById('kpiRow').innerHTML = cells.map((c) =>
-      '<div class="kpi"><div class="num">' + c[1] + '</div><div class="lbl">' + c[0] + (c[2] ? ' · ' + c[2] : '') + '</div></div>'
-    ).join('');
+    document.getElementById('kpiRow').innerHTML = cells.map((c) => {
+      // 7.4: ตัวเลข KPI สีตาม threshold (เฉพาะ % ถ้ามีค่า)
+      const kpiColor = (c[3] == null) ? '' : ' style="color:' + fillColor(c[3]) + '"';
+      return '<div class="kpi"><div class="num"' + kpiColor + '>' + c[1] + '</div><div class="lbl">' + c[0] + (c[2] ? ' · ' + c[2] : '') + '</div></div>';
+    }).join('');
   }
 
   function renderServices(services) {
@@ -120,6 +167,29 @@
     el.innerHTML = services.map((s) =>
       '<span class="badge ' + (s.up ? 'online' : 'offline') + '">' + (s.up ? '●' : '○') + ' ' + escapeHtml(s.name) + (s.up ? ' ทำงาน' : ' หยุด') + '</span>'
     ).join('');
+  }
+
+  // alert ที่เพิ่งเกิดขึ้นของ host นี้ (บริบทปัญหา) — ใช้ /api/v1/alerts/history?host_id=<id>
+  async function renderHostAlertHistory(hostId) {
+    const el = document.getElementById('hostAlerts');
+    if (!el) return;
+    try {
+      const history = await api('/api/v1/alerts/history?host_id=' + hostId);
+      const recent = history.slice(0, 5);
+      if (!recent.length) {
+        el.innerHTML = '<div class="host-alert-empty">ไม่มี alert ล่าสุดของ host นี้</div>';
+        return;
+      }
+      el.innerHTML = '<div class="host-alert-title">Alert ล่าสุด</div>' +
+        recent.map((h) =>
+          '<div class="host-alert-row ' + (h.ack ? 'acked' : '') + '">' +
+          '<span class="ha-time">' + new Date(h.created_at * 1000).toLocaleString('th-TH') + '</span>' +
+          '<span class="ha-metric">' + escapeHtml(h.metric) + '</span>' +
+          '<span class="ha-val">' + escapeHtml(h.value) + ' (เกิน ' + escapeHtml(h.threshold) + ')</span>' +
+          (h.ack ? '<span class="badge online">ack ✓</span>' : '<span class="badge warn">รอ ack</span>') +
+          '</div>'
+        ).join('');
+    } catch (e) { /* เงียบ — ส่วนนี้เป็นเสริม */ }
   }
 
   function formatAxisTime(ms) {
@@ -140,28 +210,37 @@
   function renderChart(series) {
     if (chart) { chart.destroy(); chart = null; }
     const wrap = document.querySelector('.chart-wrap');
-    const s = series[currentMetric];
-    const points = s && s.points ? s.points : [];
-    if (!points.length) {
+    const keys = (selectedMetrics.length ? selectedMetrics : ['cpu_percent'])
+      .filter((k) => series[k] && series[k].points && series[k].points.length);
+    if (!keys.length) {
+      wrap.innerHTML = '<div class="empty-note">' + I18N.noData + '</div>';
+      return;
+    }
+    // ทุก metric ที่เลือกต้องเป็นหน่วยเดียวกัน (กันสเกลเพี้ยน — uptime วินาทีปน cpu %)
+    const baseUnit = unitOf(keys[0]);
+    if (!keys.every((k) => unitOf(k) === baseUnit)) {
       wrap.innerHTML = '<div class="empty-note">' + I18N.noData + '</div>';
       return;
     }
     wrap.innerHTML = '<canvas id="metricChart"></canvas>';
     const ctx = document.getElementById('metricChart');
-    const unit = unitOf(currentMetric);
+    const datasets = keys.map((k, i) => {
+      const m = metricOf(k);
+      return {
+        label: m ? m.label : k,
+        unit: baseUnit,
+        data: series[k].points.map((p) => ({ x: p[0] * 1000, y: p[1] })),
+        borderColor: seriesColor(i),
+        backgroundColor: seriesColor(i),
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+      };
+    });
     chart = new Chart(ctx, {
       type: 'line',
-      data: {
-        datasets: [{
-          label: METRICS.find((m) => m.key === currentMetric).label,
-          data: points.map((p) => ({ x: p[0] * 1000, y: p[1] })),
-          borderColor: 'var(--accent)',
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false,
-        }],
-      },
+      data: { datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -174,23 +253,28 @@
           },
           y: {
             beginAtZero: true,
-            ticks: {
-              callback: (v) => fmtByUnit(v, unit),
-            },
-            title: { display: true, text: METRICS.find((m) => m.key === currentMetric).label, color: 'var(--text-2)' },
+            ticks: { callback: (v) => fmtByUnit(v, baseUnit) },
+            title: { display: true, text: unitLabel(baseUnit), color: 'var(--text-2)' },
           },
         },
         plugins: {
-          legend: { display: false },
+          legend: { display: true, labels: { color: 'var(--text-2)', usePointStyle: true, boxWidth: 8 } },
           tooltip: {
             callbacks: {
               title: (items) => formatAxisTime(items[0].parsed.x),
-              label: (c) => METRICS.find((m) => m.key === currentMetric).label + ': ' + fmtByUnit(c.raw.y, unit),
+              label: (c) => c.dataset.label + ': ' + fmtByUnit(c.raw.y, baseUnit),
             },
           },
         },
       },
     });
+  }
+
+  function unitLabel(unit) {
+    if (unit === 'percent') return '%';
+    if (unit === 'bytes') return 'bytes';
+    if (unit === 'sec') return 'seconds';
+    return 'count';
   }
 
   // เติมตัวเลือก host ใน host dashboard (จาก fleet data ที่ app.js มี)
@@ -212,7 +296,11 @@
     if (!id) return;
     try {
       const host = await api('/api/v1/hosts/' + id);
-      const metrics = await api('/api/v1/hosts/' + id + '/metrics?range=' + currentRange + '&metrics=' + currentMetric);
+      // metric ที่เลือก (ต้องหน่วยเดียวกัน) — ส่งหลายตัวคั่น comma
+      const keys = selectedMetrics.length ? selectedMetrics : ['cpu_percent'];
+      const baseUnit = unitOf(keys[0]);
+      const unitKeys = keys.filter((k) => unitOf(k) === baseUnit);
+      const metrics = await api('/api/v1/hosts/' + id + '/metrics?range=' + currentRange + '&metrics=' + unitKeys.join(','));
       document.getElementById('hostSelect').value = id;
       document.getElementById('hostIdLabel').textContent = host.hostname || host.host_id;
       const badge = document.getElementById('hostBadge');
@@ -229,26 +317,42 @@
       };
       renderKpi(host.summary);
       renderServices(host.services);
+      renderHostAlertHistory(id);
       renderMetricChips();
       renderChart(metrics.series);
     } catch (e) { toast('error', e.message); }
   }
 
-  // metric selector chips — แสดง metric ที่เลือก (plot ทีละตัว กันสเกลเพี้ยน)
+  // metric selector chips — toggle หลายตัว (ต้องหน่วยเดียวกัน ถึงวาดรวม)
   function renderMetricChips() {
     const wrap = document.getElementById('metricChips');
     if (!wrap) return;
     wrap.innerHTML = METRICS.map((m) =>
-      '<button class="pill' + (m.key === currentMetric ? ' active' : '') + '" data-metric="' + m.key + '">' + m.label + '</button>'
+      '<button class="pill' + (selectedMetrics.includes(m.key) ? ' active' : '') + '" data-metric="' + m.key + '">' + m.label + '</button>'
     ).join('');
     wrap.querySelectorAll('[data-metric]').forEach((b) => {
       b.onclick = () => {
-        currentMetric = b.dataset.metric;
-        wrap.querySelectorAll('[data-metric]').forEach((x) => x.classList.toggle('active', x === b));
-        const id = currentRouteId();
-        if (id) renderHostView(id);
+        toggleMetric(b.dataset.metric);
       };
     });
+  }
+
+  // toggle metric เข้า/ออกจาก selectedMetrics; อย่างน้อย 1 ตัว
+  function toggleMetric(key) {
+    const idx = selectedMetrics.indexOf(key);
+    if (idx >= 0) {
+      if (selectedMetrics.length > 1) selectedMetrics.splice(idx, 1);
+      else { toast('info', 'ต้องเลือกอย่างน้อย 1 metric'); return; }
+    } else {
+      // เพิ่ม — ถ้าหน่วยต่างจากที่เลือกอยู่ ให้เปลี่ยนเป็นตัวที่เพิ่งคลิก (กันสเกลเพี้ยน)
+      if (selectedMetrics.length && unitOf(selectedMetrics[0]) !== unitOf(key)) {
+        selectedMetrics = [key];
+      } else {
+        selectedMetrics.push(key);
+      }
+    }
+    const id = currentRouteId();
+    if (id) renderHostView(id);
   }
 
   // range buttons (event delegation กัน re-render)
@@ -256,6 +360,7 @@
     const btn = e.target.closest('[data-range]');
     if (!btn) return;
     currentRange = btn.dataset.range;
+    localStorage.setItem('monitor.range', currentRange);  // 7.6
     document.querySelectorAll('[data-range]').forEach((b) => b.classList.toggle('active', b === btn));
     const id = currentRouteId();
     if (id) renderHostView(id);

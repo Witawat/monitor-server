@@ -210,6 +210,38 @@ select { appearance: auto; }
 .rule-actions { display: flex; gap: 8px; margin-top: 14px; }
 .login-error { color: var(--danger); font-size: 0.8125rem; margin-top: 8px; min-height: 1em; }
 
+/* ── ข้อมูล server (หน้า ตั้งค่า) ── */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.info-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.info-label { display: block; font-size: 0.75rem; color: var(--text-2); margin-bottom: 2px; }
+.info-val { font-size: 0.9375rem; font-weight: 600; color: var(--text); word-break: break-word; }
+
+/* ── host alert ล่าสุด (หน้า Host) ── */
+.host-alerts { margin-bottom: 16px; }
+.host-alert-title { font-size: 0.8125rem; color: var(--text-2); margin-bottom: 6px; font-weight: 600; }
+.host-alert-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  border-left: 3px solid var(--warn); background: var(--surface); border-radius: 6px; margin-bottom: 4px;
+}
+.host-alert-row.acked { border-left-color: var(--text-2); opacity: .6; }
+.host-alert-row .ha-time { font-size: 0.75rem; color: var(--text-2); min-width: 120px; }
+.host-alert-row .ha-metric { font-weight: 600; color: var(--text); }
+.host-alert-row .ha-val { font-size: 0.8125rem; color: var(--text-2); }
+.host-alert-empty { font-size: 0.8125rem; color: var(--text-2); }
+.badge.warn { background: #fef3c7; color: var(--warn); }
+
+/* ── sparkline ใน Fleet card ── */
+.spark-wrap { height: 34px; margin-top: 8px; position: relative; }
+.spark-wrap canvas { width: 100% !important; height: 34px !important; }
+
+/* ── เตือน service หยุดใน Fleet card ── */
+.svc-warn { font-size: 0.75rem; color: var(--warn); background: #fef3c7; border-radius: 6px; padding: 4px 8px; margin-top: 8px; }
+
+/* ── empty state (WEBUI_DESIGN.md §10) ── */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-2); }
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 10px; opacity: .7; }
+.empty-state p { margin: 0 0 16px; }
+
 /* ── responsive (WEBUI_DESIGN.md §3) ── */
 @media (max-width: 767px) {
   .topnav { margin-left: 8px; }

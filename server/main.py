@@ -221,6 +221,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                     "max_batch_size": cfg.ingest.max_batch_size,
                     "offline_timeout_sec": cfg.ingest.offline_timeout_sec,
                 },
+                "storage": {
+                    "retention_raw_days": cfg.storage.retention_raw_days,
+                    "rollup_intervals": cfg.storage.rollup_intervals,
+                },
             }
         )
 
