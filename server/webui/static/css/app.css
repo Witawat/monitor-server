@@ -167,6 +167,7 @@ td.actions .btn { margin-left: 6px; }
 .wizard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 4px 0 8px; }
 @media (max-width: 600px) { .wizard-grid { grid-template-columns: 1fr; } }
 .wizard-grid .field { margin-bottom: 0; }
+.field-hint { display: block; width: 100%; color: var(--text-2); font-size: 0.75rem; margin-top: 4px; line-height: 1.35; }
 
 /* ── login ── */
 .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }

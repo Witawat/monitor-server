@@ -69,11 +69,31 @@
     <h2>เพิ่มเครื่องใหม่ (Agent)</h2>
     <p class="install-note">กำหนดค่า agent สำหรับเครื่องใหม่ แล้วคัดลอกคำสั่งไปรันบนเครื่องนั้น (ไม่ต้องมี Python — ไฟล์ config/data อยู่ข้าง exe)</p>
     <div class="wizard-grid">
-      <div class="field"><label for="addHostId">host_id</label><input id="addHostId" placeholder="เช่น web-01 / db-01"></div>
-      <div class="field"><label for="addInterval">interval (วินาที)</label><input id="addInterval" type="number" value="15" min="1"></div>
-      <div class="field"><label for="addWatch">watch (service/process)</label><input id="addWatch" placeholder="เช่น nginx,mysql (คั่น ,)"></div>
-      <div class="field"><label for="addPorts">ports (TCP ที่เฝ้า)</label><input id="addPorts" placeholder="เช่น 80:web,443:https (คั่น ,)"></div>
-      <div class="field"><label for="addMaxBatch">max-batch</label><input id="addMaxBatch" type="number" value="100" min="1"></div>
+      <div class="field">
+        <label for="addHostId">host_id</label>
+        <input id="addHostId" placeholder="เช่น web-01 / db-01">
+        <small class="field-hint">ชื่อระบุเครื่องนี้ใน WebUI (ใช้เป็นตัวตนของ host, token ผูกกับ id นี้)</small>
+      </div>
+      <div class="field">
+        <label for="addInterval">interval (วินาที)</label>
+        <input id="addInterval" type="number" value="15" min="1">
+        <small class="field-hint">รอบที่ agent เก็บ + push metric (ยิ่งถี่ = กราฟละเอียดขึ้น แต่โหลด server มากขึ้น เช่น 15 = ทุก 15 วิ)</small>
+      </div>
+      <div class="field">
+        <label for="addWatch">watch (service/process)</label>
+        <input id="addWatch" placeholder="เช่น nginx,mysql (คั่น ,)">
+        <small class="field-hint">ชื่อ service/process ที่ต้องการเฝ้าว่า up/down — แสดง badge ในหน้า Host, คั่นด้วย , เช่น nginx,mysql (ปล่อยว่างได้)</small>
+      </div>
+      <div class="field">
+        <label for="addPorts">ports (TCP ที่เฝ้า)</label>
+        <input id="addPorts" placeholder="เช่น 80:web,443:https (คั่น ,)">
+        <small class="field-hint">TCP port ที่เครื่องนี้เปิดให้เฝ้าเปิด/ปิด — รูป port:ชื่อ (เช่น 80:web) ใช้แสดงตาราง Ports ในหน้า Host (ปล่อยว่างได้)</small>
+      </div>
+      <div class="field">
+        <label for="addMaxBatch">max-batch</label>
+        <input id="addMaxBatch" type="number" value="100" min="1">
+        <small class="field-hint">จำนวน snapshot สูงสุดต่อ request — ตรงกับ server ingest.max_batch_size (ค่า 100 มาตรฐาน, ปรับน้อยลงถ้า server ตั้งจำกัด)</small>
+      </div>
     </div>
     <div class="install-step"><b>token:</b> สร้างโดยอัตโนมัติจาก host_id (แสดงครั้งเดียว)</div>
     <div class="toolbar install-tools">
