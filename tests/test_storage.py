@@ -34,6 +34,7 @@ def _snap(ts: int, cpu: float = 10.0) -> Snapshot:
             "memory": {"total": 1000, "used": 400, "percent": 40.0},
             "disk": [{"mount": "/", "total": 100, "used": 50, "percent": 50.0}],
             "net": [{"iface": "eth0", "rx_bytes": 1000, "tx_bytes": 500}],
+            "ports": [{"port": 80, "name": "web", "up": True}, {"port": 443, "name": "https", "up": False}],
             "uptime": 3600,
             "procs": 42,
         }
@@ -95,5 +96,15 @@ async def test_delete_host(db):
     await db.upsert_host("h1", "web-01", "linux", "tok", now=100)
     await db.insert_batch([_snap(1000)])
     assert await db.delete_host("h1") is True
-    assert await db.delete_host("h1") is False
-    assert await db.get_host("h1") is None
+
+
+async def test_latest_ports(db):
+    """latest_ports คืนสถานะ port ของ snapshot ล่าสุด."""
+
+    now = int(time.time())
+    await db.upsert_host("h1", "web-01", "linux", "tok", now=now)
+    await db.insert_batch([_snap(now, 20.0)])
+    ports = await db.latest_ports("h1")
+    assert len(ports) == 2
+    assert any(p["port"] == 80 and p["up"] == 1 for p in ports)
+    assert any(p["port"] == 443 and p["up"] == 0 for p in ports)

@@ -58,7 +58,7 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
     fail_streak = 0
 
     while True:
-        batch: list[dict[str, Any]] = [snapshot_to_dict(collect.snapshot(host_id, watch=config.watch))]
+        batch: list[dict[str, Any]] = [snapshot_to_dict(collect.snapshot(host_id, watch=config.watch, ports=list(config.ports)))]
         status = push_batch_status(config.server_url, config.token, batch)
         if status in (401, 403):
             # token/config ผิด — ไม่มีทางหาย อย่า retry ตลอดไป

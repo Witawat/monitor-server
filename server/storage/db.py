@@ -121,6 +121,16 @@ CREATE TABLE IF NOT EXISTS service_samples (
 );
 CREATE INDEX IF NOT EXISTS idx_service_host_ts ON service_samples(host_id, ts);
 
+CREATE TABLE IF NOT EXISTS port_samples (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_id TEXT NOT NULL,
+    ts      INTEGER NOT NULL,
+    port    INTEGER NOT NULL,
+    name    TEXT NOT NULL DEFAULT '',
+    up      INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_port_host_ts ON port_samples(host_id, ts);
+
 CREATE TABLE IF NOT EXISTS alert_rules (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     name      TEXT NOT NULL,
@@ -334,6 +344,14 @@ class Database:
                 """,
                 (snap.host_id, snap.ts, s.name, 1 if s.up else 0),
             )
+        for p in snap.ports:
+            await conn.execute(
+                """
+                INSERT INTO port_samples (host_id, ts, port, name, up)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (snap.host_id, snap.ts, p.port, p.name, 1 if p.up else 0),
+            )
         await conn.commit()
 
     async def insert_batch(self, snaps: list[Snapshot]) -> None:
@@ -375,6 +393,14 @@ class Database:
                     """,
                     (snap.host_id, snap.ts, s.name, 1 if s.up else 0),
                 )
+            for p in snap.ports:
+                await conn.execute(
+                    """
+                    INSERT INTO port_samples (host_id, ts, port, name, up)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (snap.host_id, snap.ts, p.port, p.name, 1 if p.up else 0),
+                )
         await conn.commit()
 
     # ── query ──
@@ -414,6 +440,7 @@ class Database:
         h["tags"] = json.loads(h["tags"] or "[]")
         h["summary"] = await self._latest_summary(host_id)
         h["services"] = await self.latest_services(host_id)
+        h["ports"] = await self.latest_ports(host_id)
         return h
 
     async def set_host_tags(self, host_id: str, tags: list[str]) -> bool:
@@ -444,6 +471,19 @@ class Database:
             SELECT name, up FROM service_samples WHERE host_id = ? AND ts =
                 (SELECT MAX(ts) FROM service_samples WHERE host_id = ?)
             ORDER BY name
+            """,
+            (host_id, host_id),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+
+    async def latest_ports(self, host_id: str) -> list[dict[str, Any]]:
+        """คืนสถานะ port ล่าสุดของ host (ชุด ts ล่าสุดเท่านั้น)."""
+
+        cur = await self._require().execute(
+            """
+            SELECT port, name, up FROM port_samples WHERE host_id = ? AND ts =
+                (SELECT MAX(ts) FROM port_samples WHERE host_id = ?)
+            ORDER BY port
             """,
             (host_id, host_id),
         )

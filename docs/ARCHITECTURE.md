@@ -75,6 +75,7 @@
   "swap": {"total": 0, "used": 0},
   "disk": [{"mount": "/", "total": 0, "used": 0, "percent": 0}],
   "net": [{"iface": "eth0", "rx_bytes": 0, "tx_bytes": 0}],
+  "ports": [{"port": 80, "name": "web", "up": true}],
   "uptime": 86400,
   "procs": 240
 }

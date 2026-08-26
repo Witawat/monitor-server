@@ -18,6 +18,13 @@
   <div class="host-alerts" id="hostAlerts"></div>
   <div class="kpi-row" id="kpiRow"></div>
   <div id="servicesRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+  <div class="ports-section" id="portsSection">
+    <div class="subhead">Ports ที่เปิด/ปิด</div>
+    <table class="ports-table">
+      <thead><tr><th>Port</th><th>ชื่อ</th><th>สถานะ</th></tr></thead>
+      <tbody id="portsBody"></tbody>
+    </table>
+  </div>
   <div class="toolbar">
     <span class="chart-label">Metric:</span>
     <div class="chips" id="metricChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>

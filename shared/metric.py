@@ -70,6 +70,15 @@ class ServiceSample:
 
 
 @dataclass
+class PortSample:
+    """สถานะเปิด/ปิดของหนึ่ง TCP port ที่ agent เฝ้าดู (ตาม config ports)."""
+
+    port: int = 0
+    name: str = ""
+    up: bool = False  # True = port กำลัง listen
+
+
+@dataclass
 class Snapshot:
     """หนึ่งจุดข้อมูล metric ของ host ณ เวลา ts (วินาที epoch)."""
 
@@ -84,6 +93,7 @@ class Snapshot:
     disk: list[DiskSample] = field(default_factory=list)
     net: list[NetSample] = field(default_factory=list)
     services: list[ServiceSample] = field(default_factory=list)
+    ports: list[PortSample] = field(default_factory=list)
     uptime: int = 0
     procs: int = 0
 
@@ -155,6 +165,14 @@ def snapshot_from_dict(data: dict[str, Any]) -> Snapshot:
             )
             for s in (data.get("services") or [])
         ],
+        ports=[
+            PortSample(
+                port=_as_int(p.get("port")),
+                name=str(p.get("name", "")),
+                up=bool(p.get("up", False)),
+            )
+            for p in (data.get("ports") or [])
+        ],
         uptime=_as_int(data.get("uptime")),
         procs=_as_int(data.get("procs")),
     )
@@ -181,6 +199,7 @@ def snapshot_to_dict(snap: Snapshot) -> dict[str, Any]:
             for n in snap.net
         ],
         "services": [{"name": s.name, "up": s.up} for s in snap.services],
+        "ports": [{"port": p.port, "name": p.name, "up": p.up} for p in snap.ports],
         "uptime": snap.uptime,
         "procs": snap.procs,
     }

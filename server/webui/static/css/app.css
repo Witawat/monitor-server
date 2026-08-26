@@ -237,6 +237,12 @@ select { appearance: auto; }
 .spark-wrap { height: 34px; margin-top: 8px; position: relative; }
 .spark-wrap canvas { width: 100% !important; height: 34px !important; }
 
+/* ── ตาราง port ที่เปิด/ปิด (หน้า Host) ── */
+.ports-section { margin-bottom: 16px; }
+.ports-section .subhead { font-size: 0.8125rem; color: var(--text-2); font-weight: 600; margin-bottom: 6px; }
+.ports-table { max-width: 420px; }
+.ports-table td:first-child { font-weight: 600; }
+
 /* ── เตือน service หยุดใน Fleet card ── */
 .svc-warn { font-size: 0.75rem; color: var(--warn); background: #fef3c7; border-radius: 6px; padding: 4px 8px; margin-top: 8px; }
 

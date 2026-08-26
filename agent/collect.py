@@ -9,7 +9,15 @@ import uuid
 from pathlib import Path
 from typing import Protocol
 
-from shared.metric import DiskSample, MemorySample, NetSample, ServiceSample, Snapshot, SwapSample
+from shared.metric import (
+    DiskSample,
+    MemorySample,
+    NetSample,
+    PortSample,
+    ServiceSample,
+    Snapshot,
+    SwapSample,
+)
 
 try:  # psutil เป็น optional — fallback stdlib ถ้าไม่มี
     import psutil  # type: ignore[import-untyped]
@@ -87,6 +95,7 @@ class SysInfoProvider(Protocol):
     def uptime(self) -> int: ...
     def procs(self) -> int: ...
     def services(self, names: list[str]) -> list[ServiceSample]: ...
+    def ports(self, ports: list[tuple[int, str]]) -> list[PortSample]: ...
 
 
 class _PsutilProvider:
@@ -144,6 +153,9 @@ class _PsutilProvider:
             ServiceSample(name=n, up=n.lower() in lowered)
             for n in names
         ]
+
+    def ports(self, ports: list[tuple[int, str]]) -> list[PortSample]:
+        return check_ports(ports)
 
 
 class _StdlibProvider:
@@ -262,6 +274,9 @@ class _StdlibProvider:
         # stdlib ไม่มีวิธีระบุ process ได้ครบทุกแพลตฟอร์ม — คืน not-up เพื่อความชัดเจน
         return [ServiceSample(name=n, up=False) for n in names]
 
+    def ports(self, ports: list[tuple[int, str]]) -> list[PortSample]:
+        return check_ports(ports)
+
 
 def _make_provider() -> SysInfoProvider:
     """เลือก provider ตามว่า import psutil ได้หรือไม่."""
@@ -269,8 +284,35 @@ def _make_provider() -> SysInfoProvider:
     return _PsutilProvider() if psutil is not None else _StdlibProvider()
 
 
+def check_ports(ports: list[tuple[int, str]]) -> list[PortSample]:
+    """ตรวจว่าแต่ละ port กำลัง listen (เปิด) โดยลอง connect ไป 127.0.0.1.
+
+    ใช้ socket.connect_ex — เร็ว, ทำงานบนทั้ง Linux/Windows, ไม่ต้อง permission.
+    Notes:
+        เช็คเฉพาะ loopback (127.0.0.1) — เพียงพอสำหรับบริการที่ bind บนเครื่องนี้;
+        ถ้าบริการ bind เฉพาะ address อื่น (ไม่ใช่ 127.0.0.1/all) ผลอาจไม่ครบ.
+    """
+    import socket
+
+    samples: list[PortSample] = []
+    for port, name in ports:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.3)
+        try:
+            up = sock.connect_ex(("127.0.0.1", port)) == 0
+        except OSError:
+            up = False
+        finally:
+            sock.close()
+        samples.append(PortSample(port=port, name=name, up=up))
+    return samples
+
+
 def snapshot(
-    host_id: str, provider: SysInfoProvider | None = None, watch: list[str] | tuple[str, ...] = ()
+    host_id: str,
+    provider: SysInfoProvider | None = None,
+    watch: list[str] | tuple[str, ...] = (),
+    ports: list[tuple[int, str]] | tuple[tuple[int, str], ...] = (),
 ) -> Snapshot:
     """สร้าง Snapshot ปัจจุบันของ host (ใช้ provider ที่ระบุ หรือ auto-select)."""
 
@@ -289,6 +331,7 @@ def snapshot(
         disk=prov.disk(),
         net=prov.net(),
         services=prov.services(list(watch)),
+        ports=prov.ports(list(ports)),
         uptime=prov.uptime(),
         procs=prov.procs(),
     )

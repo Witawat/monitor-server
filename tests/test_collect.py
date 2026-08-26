@@ -5,13 +5,23 @@ from __future__ import annotations
 import platform
 
 from agent.collect import (
+    check_ports,
     host_id,
     parse_meminfo,
     parse_net_dev,
     parse_uptime,
     snapshot,
 )
-from shared.metric import DiskSample, MemorySample, NetSample, ServiceSample, Snapshot, SwapSample
+from agent.config import _parse_ports
+from shared.metric import (
+    DiskSample,
+    MemorySample,
+    NetSample,
+    PortSample,
+    ServiceSample,
+    Snapshot,
+    SwapSample,
+)
 
 
 class _FakeProvider:
@@ -44,6 +54,9 @@ class _FakeProvider:
     def services(self, names):
         return [ServiceSample(name=n, up=(n == "nginx")) for n in names]
 
+    def ports(self, ports):
+        return [PortSample(port=p, name=n, up=False) for p, n in ports]
+
 
 def test_parse_meminfo():
     """แยก MemTotal/MemAvailable จาก /proc/meminfo."""
@@ -74,7 +87,7 @@ def test_parse_net_dev():
 def test_snapshot_uses_provider():
     """snapshot() สร้างค่าจาก provider ที่ส่งเข้าไป."""
 
-    snap = snapshot("h1", provider=_FakeProvider(), watch=["nginx", "mysql"])
+    snap = snapshot("h1", provider=_FakeProvider(), watch=["nginx", "mysql"], ports=[(80, "web"), (443, "https")])
     assert isinstance(snap, Snapshot)
     assert snap.host_id == "h1"
     assert snap.cpu_percent == 12.5
@@ -86,6 +99,32 @@ def test_snapshot_uses_provider():
     assert snap.procs == 42
     assert snap.platform == platform.system().lower()
     assert snap.services == [ServiceSample(name="nginx", up=True), ServiceSample(name="mysql", up=False)]
+    assert snap.ports == [PortSample(port=80, name="web", up=False), PortSample(port=443, name="https", up=False)]
+
+
+def test_parse_ports():
+    """แปลงสตริง '80:web,443:https,22' → ((80,'web'),(443,'https'),(22,''))."""
+
+    assert _parse_ports("80:web,443:https,22") == ((80, "web"), (443, "https"), (22, ""))
+    assert _parse_ports("") == ()
+    assert _parse_ports("abc, 8080") == ((8080, ""),)  # ข้ามค่าที่ไม่ใช่ตัวเลข
+
+
+def test_check_ports(monkeypatch):
+    """check_ports แปลงผล connect_ex เป็น PortSample.up."""
+
+
+    class _FakeSock:
+        def __init__(self, *a): pass
+        def settimeout(self, t): pass
+        def connect_ex(self, addr) -> int:
+            return 0 if addr[1] == 80 else 1  # port 80 เปิด, 443 ปิด
+        def close(self): pass
+
+    monkeypatch.setattr("socket.socket", lambda *a: _FakeSock())
+    samples = check_ports([(80, "web"), (443, "https")])
+    assert samples[0] == PortSample(port=80, name="web", up=True)
+    assert samples[1] == PortSample(port=443, name="https", up=False)
 
 
 def test_host_id_persistent(tmp_path):

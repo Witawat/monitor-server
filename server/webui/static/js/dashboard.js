@@ -169,6 +169,19 @@
     ).join('');
   }
 
+  // ตาราง port ที่เปิด/ปิดของ host — จาก host.ports (ฝั่ง server query ล่าสุด)
+  function renderPorts(ports) {
+    const body = document.getElementById('portsBody');
+    const section = document.getElementById('portsSection');
+    if (!body) return;
+    if (!ports || !ports.length) { if (section) section.style.display = 'none'; if (body) body.innerHTML = ''; return; }
+    if (section) section.style.display = 'block';
+    body.innerHTML = ports.map((p) =>
+      '<tr><td>: ' + escapeHtml(p.port) + '</td><td>' + escapeHtml(p.name || '—') + '</td>' +
+      '<td>' + (p.up ? '<span class="badge online">● เปิด</span>' : '<span class="badge offline">○ ปิด</span>') + '</td></tr>'
+    ).join('');
+  }
+
   // alert ที่เพิ่งเกิดขึ้นของ host นี้ (บริบทปัญหา) — ใช้ /api/v1/alerts/history?host_id=<id>
   async function renderHostAlertHistory(hostId) {
     const el = document.getElementById('hostAlerts');
@@ -317,6 +330,7 @@
       };
       renderKpi(host.summary);
       renderServices(host.services);
+      renderPorts(host.ports);
       renderHostAlertHistory(id);
       renderMetricChips();
       renderChart(metrics.series);

@@ -67,6 +67,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - [x] Fleet dashboard: รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์
 - [x] กราฟย้อนหลัง per metric (time-series SQLite + rollup เก็บ 1m/5m/1h/1d) — ดูย้อนหลังได้สูงสุด 45 วัน (`retention_raw_days`, default 45)
 - [x] Agent push: batch + retry + backoff + queue เมื่อ offline (เก็บในเครื่องแล้วส่งทีหลัง)
+- [x] Agent เฝ้า TCP port (เปิด/ปิด ตาม config `--ports` / env `MONITOR_PORTS` เช่น `80:web,443:https`) — server เก็บ `port_samples` + host-view แสดงตาราง
 - [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram) + host-down
 - [x] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token
 - [x] Auth/security: API token ต่อ host (X-Agent-Token), rate limit ingest + login, CSP headers
