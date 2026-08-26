@@ -77,7 +77,7 @@ def main() -> None:
     """แยก --service กับโหมดรันปกติ."""
 
     parser = argparse.ArgumentParser(description="monitor-server")
-    parser.add_argument("--config", default="config.toml", help="เส้นทาง config.toml")
+    parser.add_argument("--config", default="", help="เส้นทาง config.toml (ว่าง = ข้าง exe/runtime อัตโนมัติ)")
     parser.add_argument(
         "--service",
         choices=["install", "start", "stop", "remove"],

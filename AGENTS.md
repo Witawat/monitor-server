@@ -47,12 +47,17 @@ python -m venv .venv
 python -m server.main --config config.toml      # หรือ python run.py --config config.toml
 # เปิด http://127.0.0.1:18080
 
+# ติดตั้ง agent เป็น service อัตโนมัติ (เขียน agent.cfg ข้าง exe + NSSM/systemd) — ใช้ exe
+.\dist\monitor-agent.exe --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 [--ports 80:web,443:https] [--watch nginx,mysql]
+# รัน agent ตรง ๆ (foreground)
+.\dist\monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+# ลบ service
+.\dist\monitor-agent.exe --uninstall
+
+# ── DEV (มีซอร์ส ใช้ python) ──
 # รัน agent (dev — ชี้ไป server ตัวเอง)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
-
-# ติดตั้ง agent เป็น service อัตโนมัติ (เขียน agent.cfg + NSSM/systemd) — ไม่ต้อง install script แยก
-python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 [--ports 80:web,443:https] [--watch nginx,mysql]
-# ลบ service
+python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 python -m agent.agent --uninstall
 
 # ตรวจก่อนส่งงาน (ต้องผ่านหมดก่อน PR)

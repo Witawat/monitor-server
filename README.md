@@ -51,20 +51,34 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt pytest ruff mypy
 ```
 
-## รัน
+## รัน (production ใช้ exe — dev ใช้ python)
 
 ```powershell
+# ── PRODUCTION: ใช้ exe ที่ build (dist\) — ไฟล์ config/data/logs อยู่ข้าง exe ──
+
+# server (ไม่ต้อง --config — อ่าน config.toml ข้าง exe อัตโนมัติ; ไม่มีก็สร้างให้)
+.\dist\monitor-server.exe        # เปิด http://127.0.0.1:18080
+
+# agent: ติดตั้งเป็น service อัตโนมัติ (เขียน agent.cfg ข้าง exe + NSSM/systemd)
+.\dist\monitor-agent.exe --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 [--ports 80:web,443:https] [--watch nginx,mysql]
+# รัน agent ตรง ๆ (foreground)
+.\dist\monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+# ลบ service
+.\dist\monitor-agent.exe --uninstall
+```
+
+> ⚠️ **คนได้แค่ `dist\monitor-agent.exe` (ไม่มี python) ใช้คำสั่งข้างบนได้เลย** — ไม่ต้อง `python -m agent.agent`.
+
+```powershell
+# ── DEV: ใช้ python (รากโปรเจกต์) — ไฟล์ data/logs อยู่รากโปรเจกต์ ──
+
 # server (dev)
-python -m server.main --config config.toml       # เปิด http://127.0.0.1:18080
+python -m server.main --config config.toml            # เปิด http://127.0.0.1:18080
 # หรือ python run.py --config config.toml
 
 # agent (dev — ชี้ไป server ตัวเอง, token จาก WebUI)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
-
-# ติดตั้ง agent เป็น service อัตโนมัติ (เขียน agent.cfg + สร้าง service ให้เอง: Windows NSSM / Linux systemd)
-python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 [--ports 80:web,443:https] [--watch nginx,mysql]
-# ลบ service
-python -m agent.agent --uninstall
+```
 ```
 
 ## Build EXE (server + agent)

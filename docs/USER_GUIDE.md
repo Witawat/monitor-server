@@ -62,15 +62,21 @@ python run.py --config config.toml
 
 ### 2.3 ติดตั้ง agent
 
-```powershell
-# รันแบบ dev
-python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+> ใช้ **`monitor-agent.exe`** ที่ build (ใน `dist\`) — คนได้แค่ exe ก็ใช้ได้เลย (ไม่ต้องมี python). รันจากโฟลเดอร์เดียวกับ exe → `agent.cfg` เขียนข้าง exe.
 
-# หรือติดตั้งเป็น service อัตโนมัติ (เขียน agent.cfg + สร้าง service ให้เอง)
-python -m agent.agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx
+```powershell
+# ติดตั้งเป็น service อัตโนมัติ (เขียน agent.cfg ข้าง exe + สร้าง service ให้เอง: NSSM/systemd)
+monitor-agent.exe --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx
+
+# หรือรันตรง ๆ (foreground)
+monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+
+# ลบ service
+monitor-agent.exe --uninstall
 ```
 
-> `--install` แสดงบน Windows (NSSM) / Linux (systemd). ลบ service: `python -m agent.agent --uninstall`
+> 💡 **dev** (มีซอร์สโค้ด): ใช้ `python -m agent.agent ...` แทน `monitor-agent.exe` — ดู §4.2.
+> `--install` สร้าง service Windows (NSSM) / Linux (systemd).
 
 ---
 
@@ -90,13 +96,15 @@ python -m server.main --config config.toml
 ### 3.2 โหมด exe (build แล้ว) — แนะนำสำหรับ production
 
 ```powershell
-# รัน exe ในโฟลเดอร์ dist (เปิด WebUI ใน browser อัตโนมัติ)
-monitor-server.exe --config config.toml
+# รัน exe (ไม่ต้อง --config — อ่าน config.toml ข้าง exe อัตโนมัติ, เปิด WebUI ใน browser)
+monitor-server.exe
 # ไม่เปิด browser อัตโนมัติ
-monitor-server.exe --config config.toml --no-browser
+monitor-server.exe --no-browser
+# ระบุ config ตำแหน่งอื่น (ไม่ค่อยต้องทำ — ปกติข้าง exe)
+monitor-server.exe --config "D:\path\config.toml"
 ```
 
-**ไฟล์ runtime อยู่ข้าง exe**: `config.toml` + `data/` + `logs/` ถูกสร้าง/ใช้ข้างตัว exe (ไม่ต้อง `cd` ไปที่อื่น) — ครั้งแรกที่รันถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin.
+**ไฟล์ runtime อยู่ข้าง exe**: `config.toml` + `data/` + `logs/` ถูกสร้าง/ใช้**ข้างตัว exe** (resolve ข้าง `dist\` เสมอ ไม่ใช่ cwd ไม่ต้อง `cd` ไปที่อื่น) — ครั้งแรกที่รันถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin.
 
 ### 3.3 Config (config.toml)
 
@@ -146,20 +154,27 @@ Agent คือตัวที่ติดตั้งบน **เครื่�
 ### 4.2 วิธีรัน
 
 ```powershell
-# 1) รันแบบ dev (foreground)
-python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+# ── PRODUCTION (exe ที่ build — ใช้ได้แม้ไม่มี python) ──
+# 1) รันตรง ๆ (foreground)
+monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 
 # 2) รัน+เฝ้าดู service และ port
-python -m agent.agent --server http://... --token <TOKEN> --watch nginx,postgres --ports 80:web,443:https
+monitor-agent.exe --server http://... --token <TOKEN> --watch nginx,postgres --ports 80:web,443:https
 
-# 3) ติดตั้งเป็น service (เขียน agent.cfg + สร้าง service) — แนะนำ
-python -m agent.agent --install --server http://... --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx
+# 3) ติดตั้งเป็น service (เขียน agent.cfg ข้าง exe + สร้าง service) — แนะนำ
+monitor-agent.exe --install --server http://... --token <TOKEN> --interval 15 --ports 80:web,443:https --watch nginx
 # ลบ service
+monitor-agent.exe --uninstall
+
+# ── DEV (มีซอร์สโค้ด) ใช้ python แทน monitor-agent.exe ──
+python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+python -m agent.agent --install --server http://... --token <TOKEN> --interval 15
 python -m agent.agent --uninstall
 ```
 
-**การอ่าน config**: หลัง `--install` เขียน `agent.cfg` ไว้ — รัน `python -m agent.agent` (ไม่มี args) จะอ่านจากไฟล์อัตโนมัติ.
+**การอ่าน config**: หลัง `--install` เขียน `agent.cfg` **ข้าง exe** ไว้ — รัน `monitor-agent.exe` (ไม่มี args) จะอ่านจากไฟล์อัตโนมัติ.
 > ลำดับความสำคัญ: `--server/--token` (arg) > `MONITOR_*` (env) > `agent.cfg` (ไฟล์) > default
+> ⚠️ ไฟล์ `agent.cfg` + `host_id` + `queue.json` ถูกเขียน**ข้าง exe** — ไม่ลบไฟล์พวกนี้ถ้ายังต้องการให้ agent จำตัวตน/queue ต่อ
 
 ### 4.3 (option) ใช้ exe
 

@@ -234,10 +234,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 # ── entry ──
 
 def _parse_args() -> argparse.Namespace:
-    """แยก argument บรรทัดคำสั่ง (--config)."""
+    """แยก argument บรรทัดคำสั่ง (--config).
+
+    Notes:
+        default ของ --config เป็น "" (ว่าง) — ไม่ระบุ = อ่าน config.toml ข้าง exe (frozen)
+        หรือรากโปรเจกต์ (dev) อัตโนมัติ ไม่ต้องสั่ง --config.
+    """
 
     parser = argparse.ArgumentParser(description="monitor-server")
-    parser.add_argument("--config", default="config.toml", help="เส้นทาง config.toml")
+    parser.add_argument("--config", default="", help="เส้นทาง config.toml (ว่าง = ข้าง exe/runtime อัตโนมัติ)")
     parser.add_argument("--no-browser", action="store_true", help="ไม่เปิด WebUI ใน browser อัตโนมัติ")
     return parser.parse_args()
 
