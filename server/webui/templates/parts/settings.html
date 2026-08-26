@@ -21,24 +21,26 @@
   </table>
 
   <h3 style="color:var(--text-2);margin:16px 0 8px">เปลี่ยนรหัสผ่าน</h3>
-  <div class="rule-grid">
-    <div class="field">
-      <label for="oldPassword">รหัสผ่านปัจจุบัน</label>
-      <input id="oldPassword" type="password" autocomplete="current-password">
+  <div class="notif-card" style="margin-top:4px">
+    <div class="rule-grid">
+      <div class="field">
+        <label for="oldPassword">รหัสผ่านปัจจุบัน</label>
+        <input id="oldPassword" type="password" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="newPassword">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label>
+        <input id="newPassword" type="password" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+        <input id="confirmPassword" type="password" autocomplete="new-password">
+      </div>
     </div>
-    <div class="field">
-      <label for="newPassword">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label>
-      <input id="newPassword" type="password" autocomplete="new-password">
+    <div class="rule-actions" style="align-items:center">
+      <span id="changePassResult" class="notif-result"></span>
+      <span style="flex:1"></span>
+      <button class="btn primary" id="changePassBtn">เปลี่ยนรหัสผ่าน</button>
     </div>
-    <div class="field">
-      <label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
-      <input id="confirmPassword" type="password" autocomplete="new-password">
-    </div>
-  </div>
-  <div class="rule-actions" style="align-items:center">
-    <span id="changePassResult" class="notif-result"></span>
-    <span style="flex:1"></span>
-    <button class="btn primary" id="changePassBtn">เปลี่ยนรหัสผ่าน</button>
   </div>
 
   <h3 style="color:var(--text-2);margin:24px 0 8px">การแจ้งเตือน (Webhook / Telegram)</h3>
