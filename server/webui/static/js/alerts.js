@@ -231,13 +231,13 @@
     const url = document.getElementById('webhookUrl');
     if (url && url.value !== (wh.url || '')) url.value = wh.url || '';
     const en = document.getElementById('webhookEnabled');
-    if (en) en.checked = !!wh.enabled || !wh.configured;  // ช่องใหม่ default เปิดใช้งาน
+    if (en) en.checked = !!wh.enabled;  // ไม่ติ๊ก = ปิด (ไม่เลือกเอง = ไม่เปิดให้)
     const tok = document.getElementById('telegramToken');
     if (tok && tok.value !== (tg.bot_token || '')) tok.value = tg.bot_token || '';
     const chat = document.getElementById('telegramChat');
     if (chat && chat.value !== (tg.chat_id || '')) chat.value = tg.chat_id || '';
     const te = document.getElementById('telegramEnabled');
-    if (te) te.checked = !!tg.enabled || !tg.configured;  // ช่องใหม่ default เปิดใช้งาน
+    if (te) te.checked = !!tg.enabled;  // ไม่ติ๊ก = ปิด (ไม่เลือกเอง = ไม่เปิดให้)
     updateRuleFormHints(wh.configured, tg.configured);
   }
 
@@ -306,7 +306,12 @@
           body: JSON.stringify(body),
         });
         renderNotifierState(data);
-        toast('success', I18N.saved);
+        const saved = data[ch] || {};
+        if (saved.configured && !saved.enabled) {
+          toast('info', 'บันทึกแล้ว — ช่องนี้ปิดใช้งาน (ติ๊ก "เปิดใช้งาน" เพื่อเปิด)');
+        } else {
+          toast('success', I18N.saved);
+        }
       } catch (e) { toast('error', e.message); }
     };
   }
