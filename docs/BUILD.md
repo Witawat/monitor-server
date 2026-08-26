@@ -28,6 +28,25 @@
 ### ทาง C: zip กระจาย
 - zip `agent/` + `shared/` + `service/` → ติดตั้งด้วย script (Windows/Linux) — กลางๆ ระหว่าง A/B
 
+## Build EXE อัตโนมัติ (server + agent + icon + UPX)
+
+มีสคริปต์เดียวรันครบ: `scripts/build.ps1`
+```powershell
+# ลง dev dep ก่อน (ครั้งแรก)
+.venv\Scripts\python.exe -m pip install -r requirements-build.txt
+
+# build (ดาวน์โหลด UPX ล่าสุดอัตโนมัติถ้ายังไม่มี + สร้าง icon + PyInstaller + UPX)
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1
+```
+ผลลัพธ์ (ใน `dist/`):
+- `monitor-server.exe` — server แบบ onefile (มี WebUI/templates/static bundled)
+- `monitor-agent.exe` — agent แบบ onefile (รวม `shared/` อัตโนมัติ)
+
+รายละเอียด:
+- **icon**: `scripts/make_icon.py` (Pillow) วาดหน้าจอ monitor + เส้น pulse → `build/monitor.ico` (16–256) — ใช้เป็น icon ของทั้ง 2 exe
+- **UPX**: ดาวน์โหลด release ล่าสุด → `scripts/tools/upx/upx.exe` (build tool — gitignore ไม่ติด commit) แล้วบีบ exe ด้วย `--upx-dir`
+- ตรวจหลัง build: `dist\monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15` + รัน `dist\monitor-server.exe` แล้วเปิด WebUI
+
 ## เกณฑ์
 - agent ห้ามมี dependency หนัก — ถ้าใช้ PyInstaller ต้องตรวจ size ≤ ~15MB และรันบนเครื่องไม่มี Python
 - ทดสอบบนเครื่องไม่มี Python (ถ้าใช้ทาง B) ก่อนปิดงาน

@@ -3,6 +3,40 @@
     <h2>Alerts</h2>
     <button class="pill active" id="tabRules">กฎ</button>
     <button class="pill" id="tabHistory">ประวัติ</button>
+    <span style="flex:1"></span>
+    <button class="btn primary" id="newRuleBtn">+ สร้างกฎ</button>
+  </div>
+  <div id="ruleForm" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+    <input type="hidden" id="ruleId">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      <div class="field"><label for="ruleName">ชื่อ</label><input id="ruleName" placeholder="CPU สูง"></div>
+      <div class="field"><label for="ruleHost">Host (ว่าง=ทุก)</label><input id="ruleHost" placeholder="web-01"></div>
+      <div class="field"><label for="ruleMetric">Metric</label>
+        <select id="ruleMetric">
+          <option value="cpu_percent">cpu_percent</option>
+          <option value="memory.percent">memory.percent</option>
+          <option value="memory.used">memory.used</option>
+          <option value="load1">load1</option>
+          <option value="disk.percent">disk.percent</option>
+          <option value="procs">procs</option>
+        </select>
+      </div>
+      <div class="field"><label for="ruleOp">Operator</label>
+        <select id="ruleOp">
+          <option>&gt;</option><option>&gt;=</option><option>&lt;</option><option>&lt;=</option><option>==</option>
+        </select>
+      </div>
+      <div class="field"><label for="ruleThreshold">Threshold</label><input id="ruleThreshold" type="number" step="any"></div>
+      <div class="field"><label for="ruleDuration">Duration</label><input id="ruleDuration" value="5m" placeholder="5m"></div>
+      <div class="field"><label>Notify</label>
+        <label><input type="checkbox" id="ruleNotifyWebhook" value="webhook"> webhook</label>
+        <label><input type="checkbox" id="ruleNotifyTelegram" value="telegram"> telegram</label>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn primary" id="saveRuleBtn">บันทึก</button>
+      <button class="btn" id="cancelRuleBtn">ยกเลิก</button>
+    </div>
   </div>
   <div id="alertsBody"><p class="empty-note">ยังไม่มี alert</p></div>
 </section>

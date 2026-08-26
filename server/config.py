@@ -29,6 +29,7 @@ class WebUIConfig(BaseModel):
     admin_pass_hash: str = ""
     secret_key: str = ""
     setup_done: bool = False
+    secure_cookie: bool = False  # เปิดเมื่อใช้ HTTPS — cookie มี Secure flag
 
     @field_validator("admin_pass_hash")
     @classmethod

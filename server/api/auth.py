@@ -43,6 +43,7 @@ async def login(
             cookie,
             httponly=True,
             samesite="lax",
+            secure=cfg.webui.secure_cookie,
             max_age=7 * 86400,
         )
         return {"ok": True}
@@ -50,10 +51,13 @@ async def login(
 
 
 @router.post("/logout")
-async def logout(response: Response) -> dict[str, Any]:
+async def logout(request: Request, response: Response) -> dict[str, Any]:
     """ลบ session cookie."""
 
-    response.delete_cookie(SESSION_COOKIE)
+    response.delete_cookie(
+        SESSION_COOKIE,
+        secure=request.app.state.config.webui.secure_cookie,
+    )
     return {"ok": True}
 
 

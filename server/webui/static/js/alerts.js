@@ -2,6 +2,62 @@
 (function () {
   const { api, toast, confirmModal } = window.Monitor;
 
+  function fillRuleForm(r) {
+    document.getElementById('ruleId').value = r && r.id ? r.id : '';
+    document.getElementById('ruleName').value = r ? r.name : '';
+    document.getElementById('ruleHost').value = r ? (r.host_id || '') : '';
+    document.getElementById('ruleMetric').value = r ? r.metric : 'cpu_percent';
+    document.getElementById('ruleOp').value = r ? r.op : '>';
+    document.getElementById('ruleThreshold').value = r ? r.threshold : '';
+    document.getElementById('ruleDuration').value = r ? (r.duration || '5m') : '5m';
+    const notify = r ? (r.notify || []) : [];
+    document.getElementById('ruleNotifyWebhook').checked = notify.includes('webhook');
+    document.getElementById('ruleNotifyTelegram').checked = notify.includes('telegram');
+    document.getElementById('ruleForm').style.display = 'block';
+  }
+
+  function showRuleForm() {
+    fillRuleForm(null);
+  }
+
+  async function saveRule() {
+    const id = document.getElementById('ruleId').value;
+    const threshold = parseFloat(document.getElementById('ruleThreshold').value);
+    if (isNaN(threshold)) { toast('error', 'threshold ต้องเป็นตัวเลข'); return; }
+    const notify = [];
+    if (document.getElementById('ruleNotifyWebhook').checked) notify.push('webhook');
+    if (document.getElementById('ruleNotifyTelegram').checked) notify.push('telegram');
+    const payload = {
+      name: document.getElementById('ruleName').value.trim(),
+      host_id: document.getElementById('ruleHost').value.trim(),
+      metric: document.getElementById('ruleMetric').value,
+      op: document.getElementById('ruleOp').value,
+      threshold,
+      duration: document.getElementById('ruleDuration').value.trim() || '5m',
+      notify,
+    };
+    if (!payload.name) { toast('error', 'ต้องระบุชื่อ'); return; }
+    try {
+      if (id) {
+        await api('/api/v1/alerts/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await api('/api/v1/alerts', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      document.getElementById('ruleForm').style.display = 'none';
+      toast('success', I18N.saved);
+      loadAlerts();
+    } catch (e) { toast('error', e.message); }
+  }
+
+  async function deleteRule(id) {
+    if (!(await confirmModal('ลบกฎนี้?'))) return;
+    try {
+      await api('/api/v1/alerts/' + id, { method: 'DELETE' });
+      toast('success', 'ลบแล้ว');
+      loadAlerts();
+    } catch (e) { toast('error', e.message); }
+  }
+
   async function loadAlerts() {
     try {
       const [rules, history] = await Promise.all([
@@ -11,6 +67,11 @@
       const body = document.getElementById('alertsBody');
       const tabRules = document.getElementById('tabRules');
       const tabHistory = document.getElementById('tabHistory');
+      document.getElementById('newRuleBtn').onclick = showRuleForm;
+      document.getElementById('saveRuleBtn').onclick = saveRule;
+      document.getElementById('cancelRuleBtn').onclick = () => {
+        document.getElementById('ruleForm').style.display = 'none';
+      };
       const render = () => {
         const showRules = tabRules.classList.contains('active');
         if (showRules) {
@@ -18,9 +79,19 @@
             body.innerHTML = '<p class="empty-note">ยังไม่มีกฎ alert</p>';
             return;
           }
-          body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th></tr></thead><tbody>' +
-            rules.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id || 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td></tr>').join('') +
+          body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th><th></th></tr></thead><tbody>' +
+            rules.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id || 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td>' +
+              '<td><button class="btn" data-edit="' + r.id + '">แก้</button> <button class="btn danger" data-del="' + r.id + '">ลบ</button></td></tr>').join('') +
             '</tbody></table>';
+          body.querySelectorAll('[data-edit]').forEach((btn) => {
+            btn.onclick = () => {
+              const r = rules.find((x) => x.id == btn.dataset.edit);
+              if (r) fillRuleForm(r);
+            };
+          });
+          body.querySelectorAll('[data-del]').forEach((btn) => {
+            btn.onclick = () => deleteRule(btn.dataset.del);
+          });
         } else {
           if (!history.length) {
             body.innerHTML = '<p class="empty-note">ยังไม่มีประวัติ alert</p>';

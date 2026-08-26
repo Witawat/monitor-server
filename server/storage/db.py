@@ -45,6 +45,21 @@ METRIC_UNITS: dict[str, str] = {
     "procs": "",
 }
 
+# คอลัมน์ metric ที่เก็บใน rollup (เฉลี่ยต่อ bucket) — ตรงกับตาราง metrics
+_ROLLUP_COLUMNS = [
+    "cpu_percent",
+    "load1",
+    "load5",
+    "load15",
+    "mem_total",
+    "mem_used",
+    "mem_percent",
+    "swap_total",
+    "swap_used",
+    "uptime",
+    "procs",
+]
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS hosts (
     host_id   TEXT PRIMARY KEY,
@@ -141,11 +156,12 @@ CREATE TABLE IF NOT EXISTS state_kv (
 class Database:
     """Async access layer สำหรับตาราง hosts/metrics/disk/net ใน SQLite."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, rollup_intervals: list[str] | None = None) -> None:
         """สร้าง Database ชี้ไฟล์ .db (ยังไม่เปิด connection จนกว่าจะ connect())."""
 
         self._path = Path(path)
         self._conn: aiosqlite.Connection | None = None
+        self._rollup_intervals = rollup_intervals or []
 
     async def connect(self) -> None:
         """เปิด connection + เปิด WAL mode + สร้าง schema ถ้ายังไม่มี."""
@@ -155,6 +171,7 @@ class Database:
         await self._conn.execute("PRAGMA journal_mode=WAL")
         await self._conn.executescript(_SCHEMA)
         await self._migrate()
+        await self._ensure_rollup_tables()
         await self._conn.commit()
 
     async def _migrate(self) -> None:
@@ -504,13 +521,23 @@ class Database:
     async def get_metrics(
         self, host_id: str, range_sec: int, metric_names: list[str]
     ) -> dict[str, dict[str, Any]]:
-        """คืน time-series ต่อ metric ภายใน range (bucket เฉลี่ยถ้าช่วงกว้าง)."""
+        """คืน time-series ต่อ metric ภายใน range (rollup สำหรับช่วงกว้าง)."""
 
         cols = [METRIC_COLUMNS[m] for m in metric_names if m in METRIC_COLUMNS]
         if not cols:
             return {}
         start_ts = int(time.time()) - range_sec
         conn = self._require()
+
+        # range ที่กว้าง → ลองอ่านจาก rollup table ก่อน (ถ้ายังไม่มี ค่อย fallback raw)
+        if range_sec > 7200:
+            chosen = self._choose_rollup(range_sec)
+            if chosen is not None:
+                name, sec = chosen
+                rolled = await self.get_rolled_series(host_id, sec, name, start_ts, metric_names)
+                if rolled:
+                    return rolled
+
         rows = await conn.execute_fetchall(
             f"SELECT ts, {', '.join(cols)} FROM metrics "
             "WHERE host_id = ? AND ts >= ? ORDER BY ts",
@@ -537,6 +564,33 @@ class Database:
                 points = [[ts, group[0][idx]] for ts, group in sorted(agg.items())]
             result[m] = {"unit": METRIC_UNITS.get(m, ""), "points": points}
         return result
+
+    def _choose_rollup(self, range_sec: int, target_points: int = 96) -> tuple[str, int] | None:
+        """เลือก interval rollup ที่เหมาะกับ range (ละเอียดสุดที่จุดไม่เกิน target)."""
+
+        candidates: list[tuple[str, int]] = []
+        for name in self._rollup_intervals:
+            sec = self._interval_seconds(name)
+            if sec and sec < range_sec:
+                candidates.append((name, sec))
+        if not candidates:
+            return None
+        for name, sec in candidates:
+            if range_sec // sec <= target_points:
+                return name, sec
+        return candidates[-1]  # ถ้าละเอียดเกินไปทุกตัว ใช้ตัวหยาบสุด
+
+    @staticmethod
+    def _interval_seconds(name: str) -> int:
+        """แปลงชื่อ interval เช่น '5m'/'1h' เป็นวินาที (0 ถ้าไม่รู้จัก)."""
+
+        mult = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+        if len(name) < 2 or name[-1] not in mult:
+            return 0
+        try:
+            return int(name[:-1]) * mult[name[-1]]
+        except ValueError:
+            return 0
 
     async def export_rows(
         self, host_id: str, range_sec: int, metric_names: list[str]
@@ -568,6 +622,146 @@ class Database:
 
         vals = list(values)
         return sum(vals) / len(vals) if vals else 0.0
+
+    # ── rollup ──
+
+    @staticmethod
+    def _safe_interval(name: str) -> str:
+        """ทำชื่อ interval ให้ปลอดภัยสำหรับเป็นชื่อตาราง."""
+
+        import re
+
+        return re.sub(r"[^a-z0-9]", "_", name)
+
+    async def _ensure_rollup_tables(self) -> None:
+        """สร้างตาราง rollup ต่อ interval + ตาราง rollup_state."""
+
+        conn = self._require()
+        for name in self._rollup_intervals:
+            table = f"rollup_{self._safe_interval(name)}"
+            cols = ", ".join(f"{c} REAL NOT NULL DEFAULT 0" for c in _ROLLUP_COLUMNS)
+            await conn.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS {table} (
+                    bucket INTEGER NOT NULL,
+                    host_id TEXT NOT NULL,
+                    {cols},
+                    PRIMARY KEY (bucket, host_id)
+                )
+                """
+            )
+            await conn.execute(
+                f"CREATE INDEX IF NOT EXISTS idx_{table}_host ON {table}(host_id, bucket)"
+            )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rollup_state (
+                interval TEXT NOT NULL,
+                host_id   TEXT NOT NULL,
+                last_bucket INTEGER NOT NULL,
+                PRIMARY KEY (interval, host_id)
+            )
+            """
+        )
+
+    async def _rollup_last_bucket(self, interval_name: str, host_id: str) -> int:
+        """คืน bucket ล่าสุดที่ rollup ไปแล้วของ host (0 ถ้ายังไม่เคย)."""
+
+        cur = await self._require().execute(
+            "SELECT last_bucket FROM rollup_state WHERE interval = ? AND host_id = ?",
+            (interval_name, host_id),
+        )
+        row = await cur.fetchone()
+        return int(row["last_bucket"]) if row else 0
+
+    async def _set_rollup_last_bucket(self, interval_name: str, host_id: str, bucket: int) -> None:
+        """บันทึก bucket ล่าสุดที่ rollup ไปแล้ว."""
+
+        await self._require().execute(
+            """
+            INSERT INTO rollup_state (interval, host_id, last_bucket) VALUES (?, ?, ?)
+            ON CONFLICT(interval, host_id) DO UPDATE SET last_bucket = excluded.last_bucket
+            """,
+            (interval_name, host_id, bucket),
+        )
+        await self._require().commit()
+
+    async def aggregate_rollup(self, interval_sec: int, interval_name: str, now: int | None = None) -> int:
+        """รวม raw metrics เป็น bucket ในตาราง rollup; คืนจำนวน bucket ที่เขียน.
+
+        Notes:
+            ประมวลผลเฉพาะ bucket ที่ปิดสมบูรณ์ (จบก่อน now-interval_sec) และยัง
+            ไม่เคย rollup — ใช้ rollup_state กันทำงานซ้ำทุกครั้ง.
+        """
+        if not self._rollup_intervals or interval_name not in self._rollup_intervals:
+            return 0
+        now = now or int(time.time())
+        table = f"rollup_{self._safe_interval(interval_name)}"
+        conn = self._require()
+        hosts = await conn.execute_fetchall("SELECT host_id FROM hosts")
+        cols = ", ".join(f"AVG({c}) AS {c}" for c in _ROLLUP_COLUMNS)
+        total = 0
+        for h in hosts:
+            host_id = str(h["host_id"])
+            last = await self._rollup_last_bucket(interval_name, host_id)
+            start_ts = last + interval_sec if last else 0
+            end_ts = ((now - interval_sec) // interval_sec) * interval_sec + interval_sec
+            if start_ts > end_ts:
+                continue
+            rows = list(
+                await conn.execute_fetchall(
+                    f"""
+                    SELECT (ts / ?) * ? AS bucket, {cols}
+                    FROM metrics WHERE host_id = ? AND ts > ? AND ts <= ?
+                    GROUP BY bucket ORDER BY bucket
+                    """,
+                    (interval_sec, interval_sec, host_id, start_ts, end_ts),
+                )
+            )
+            if not rows:
+                continue
+            max_bucket = int(rows[0]["bucket"])
+            for r in rows:
+                bucket = int(r["bucket"])
+                vals = [float(r[col] if r[col] is not None else 0) for col in _ROLLUP_COLUMNS]
+                placeholders = ", ".join(["?"] * (len(_ROLLUP_COLUMNS) + 2))
+                await conn.execute(
+                    f"INSERT OR REPLACE INTO {table} (bucket, host_id, {', '.join(_ROLLUP_COLUMNS)}) "
+                    f"VALUES ({placeholders})",
+                    (bucket, host_id, *vals),
+                )
+                max_bucket = max(max_bucket, bucket)
+            total += len(rows)
+            await self._set_rollup_last_bucket(interval_name, host_id, max_bucket)
+        await conn.commit()
+        return total
+
+    async def get_rolled_series(
+        self, host_id: str, interval_sec: int, interval_name: str, start_ts: int, metric_names: list[str]
+    ) -> dict[str, dict[str, Any]]:
+        """คืน series จากตาราง rollup (ว่างถ้ายังไม่มีข้อมูล rollup)."""
+
+        table = f"rollup_{self._safe_interval(interval_name)}"
+        cols = [METRIC_COLUMNS[m] for m in metric_names if m in METRIC_COLUMNS]
+        if not cols:
+            return {}
+        rows = await self._require().execute_fetchall(
+            f"SELECT bucket, {', '.join(cols)} FROM {table} "
+            "WHERE host_id = ? AND bucket >= ? ORDER BY bucket",
+            (host_id, start_ts),
+        )
+        if not rows:
+            return {}
+        result: dict[str, dict[str, Any]] = {}
+        for m in metric_names:
+            col = METRIC_COLUMNS.get(m)
+            if col is None or col not in cols:
+                continue
+            result[m] = {
+                "unit": METRIC_UNITS.get(m, ""),
+                "points": [[int(r["bucket"]), float(r[col])] for r in rows],
+            }
+        return result
 
     # ── maintenance ──
 

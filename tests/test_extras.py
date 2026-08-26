@@ -25,6 +25,14 @@ async def db(tmp_path):
     await database.close()
 
 
+@pytest.fixture
+async def db_rollup(tmp_path):
+    database = Database(tmp_path / "rollup.db", rollup_intervals=["1m", "5m", "1h", "1d"])
+    await database.connect()
+    yield database
+    await database.close()
+
+
 def _client(tmp_path):
     cfg = AppConfig()
     cfg.server.data_dir = str(tmp_path)
@@ -236,3 +244,59 @@ class _FakeNotifier:
 
     async def send(self, payload):
         self._sink.append(payload)
+
+
+# ── M2: rollup tables ──
+
+async def test_rollup_aggregate_and_query(db_rollup):
+    """M2: rollup 5m รวม raw → get_metrics range 6h อ่านจาก rollup."""
+
+    now = int(time.time())
+    await db_rollup.upsert_host("h1", "h1", "linux", "tok", now=now)
+    snaps = []
+    for i in range(10):
+        snaps.append(Snapshot(host_id="h1", hostname="h1", platform="linux",
+                              ts=now - 600 + i * 60, cpu_percent=float(20 + i)))
+    await db_rollup.insert_batch(snaps)
+
+    written = await db_rollup.aggregate_rollup(300, "5m", now=now)
+    assert written >= 1  # rollup เขียน bucket อย่างน้อย 1
+
+    series = await db_rollup.get_metrics("h1", 21600, ["cpu_percent"])  # 6h
+    assert series["cpu_percent"]["points"], "range 6h ควรมีข้อมูลจาก rollup"
+    assert all(len(p) == 2 for p in series["cpu_percent"]["points"])
+
+
+async def test_rollup_no_data_falls_back_raw(db):
+    """M2: ยังไม่มี rollup → get_metrics range กว้าง fallback ไป raw bucketing."""
+
+    now = int(time.time())
+    await db.upsert_host("h1", "h1", "linux", "tok", now=now)
+    await db.insert_batch([Snapshot(host_id="h1", hostname="h1", platform="linux", ts=now - 60, cpu_percent=30.0)])
+    series = await db.get_metrics("h1", 21600, ["cpu_percent"])  # db ไม่มี rollup config
+    assert series["cpu_percent"]["points"]  # ยังได้ข้อมูลจาก raw
+
+
+# ── Alert rule CRUD via API ──
+
+def test_alert_rule_crud_api(tmp_path):
+    """สร้าง/แก้/ลบ alert rule ผ่าน API."""
+
+    with _client(tmp_path) as c:
+        _authed(c, tmp_path)
+        created = c.post("/api/v1/alerts", json={
+            "name": "RAM เต็ม", "host_id": "", "metric": "memory.percent", "op": ">", "threshold": 85.0, "duration": "5m"
+        })
+        assert created.status_code == 201
+        rid = created.json()["id"]
+
+        assert c.put(f"/api/v1/alerts/{rid}", json={
+            "name": "RAM เต็ม 2", "host_id": "", "metric": "memory.percent", "op": ">", "threshold": 90.0
+        }).status_code == 200
+        rules = c.get("/api/v1/alerts").json()
+        updated = next(r for r in rules if r["id"] == rid)
+        assert updated["name"] == "RAM เต็ม 2"
+        assert updated["threshold"] == 90.0
+
+        assert c.delete(f"/api/v1/alerts/{rid}").status_code == 200
+        assert all(r["id"] != rid for r in c.get("/api/v1/alerts").json())

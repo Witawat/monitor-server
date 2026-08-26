@@ -220,7 +220,7 @@ class _StdlibProvider:
                 except OSError:
                     continue
                 total = stat.f_frsize * stat.f_blocks
-                used = (stat.f_blocks - stat.f_bfree) * stat.f_frsize
+                used = (stat.f_blocks - stat.f_bavail) * stat.f_frsize
                 percent = used / total * 100 if total else 0.0
                 samples.append(DiskSample(mount=mount, total=total, used=used, percent=round(percent, 1)))
         except OSError:
