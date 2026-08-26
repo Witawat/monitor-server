@@ -75,6 +75,14 @@ scripts\build.bat                 # ตัวหลัก — cmd ตรง
 - icon: `scripts/make_icon.py` → `build/monitor.ico` (16–256) · UPX: `scripts/tools/upx/upx.exe` (ดาวน์โหลดอัตโนมัติครั้งแรก)
 - ดูรายละเอียดเต็ม: `docs/BUILD.md`
 
+## ทดสอบ EXE ที่ build
+
+```powershell
+scripts\test_exe.bat        # หรือ: powershell -ExecutionPolicy Bypass -File scripts\test_exe.ps1 -Port 18089
+```
+
+ตรวจ end-to-end 13 ข้อ: server exe (health/WebUI/login/static), API (ingest/hosts/tags/metrics/alerts CRUD/export CSV), และ agent exe push จริง → host ขึ้น ใช้ config/data_dir ชั่วคราว (พอร์ต 18089) แล้วล้างอัตโนมัติ
+
 ## ตรวจก่อนส่งงาน
 
 ```powershell

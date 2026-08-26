@@ -140,11 +140,13 @@
 - UPX: ดาวน์โหลดล่าสุด → `scripts/tools/upx/upx.exe` (`--upx-dir`)
 - PyInstaller: server (`--add-data server\webui`) + agent (`--icon`, onefile)
 - ตรวจ exe รันได้ + WebUI/login ใช้ได้ + size/อัตราบีบ
+- ทดสอบ exe end-to-end: `scripts/test_exe.ps1` (health/WebUI/login/static + API ingest/hosts/tags/metrics/alerts CRUD/export CSV + agent exe push) — 13 checks
 
 **เช็กลิสต์:**
 - [x] login + ทุก view ใช้งานได้, layout 360/768/1280 ไม่ overflow ไม่เพี้ยน (Playwright)
 - [x] `pytest -q` ผ่าน (รวม regression ครอบ bug)
 - [x] `dist/monitor-server.exe` + `dist/monitor-agent.exe` รันได้, agent → server push ได้, UPX บีบแล้ว
+- [x] `scripts/test_exe.ps1` ทดสอบ exe ครบ 13 checks ผ่าน
 
 
 ---

@@ -58,6 +58,9 @@ scripts\build.bat        # ตัวหลัก — รันตรงได้
 # หรือ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 # ลง dev dep ก่อนครั้งแรก: .venv\Scripts\pip install -r requirements-build.txt
 # ผลลัพธ์ใน dist/: monitor-server.exe + monitor-agent.exe
+
+# ทดสอบ exe ที่ build ว่าใช้งานได้จริงครบทุกอย่าง (health/WebUI/API/agent push)
+scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -File scripts\test_exe.ps1 -Port 18089
 ```
 
 ## ฟีเจอร์หลัก (เช็กลิสต์)
@@ -76,6 +79,13 @@ scripts\build.bat        # ตัวหลัก — รันตรงได้
 - **server** ต้อง `--add-data server\webui;server/webui` (ให้ WebUI/templates/static ทำงานใน exe); **agent** รวม `shared/` อัตโนมัติ
 - dep build: `requirements-build.txt` (pillow, pyinstaller) — รายละเอียดเต็มดู `docs/BUILD.md`
 - ผลลัพธ์: `dist/monitor-server.exe` (~22.8MB) + `dist/monitor-agent.exe` (~7.1MB)
+
+## ทดสอบ EXE (หลัง build — ต้องผ่านก่อนปิดงาน)
+- **`scripts/test_exe.bat`** / **`scripts/test_exe.ps1`** — ทดสอบ exe จริงแบบ end-to-end:
+  - server exe: `/api/health`, หน้า login + login.js (CSP), static chart bundle, login/cookie, `/me`, SPA
+  - API: ingest → hosts, tags, metrics (range=6h rollup), alerts CRUD, export CSV
+  - agent exe: push จริง → host ขึ้น (host_count เพิ่ม)
+- ใช้ config/data_dir ชั่วคราวแยก (พอร์ต 18089 กันชน dev) + ล้างอัตโนมัติ; **13 checks** ต้องผ่านทั้งหมด
 
 ## กฎการทดสอบ (สำคัญ)
 - เทส server: `pytest -q` — ingest ต้องเทสด้วย mock (ไม่พึ่ง server จริง)

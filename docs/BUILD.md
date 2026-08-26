@@ -49,6 +49,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 - **icon**: `scripts/make_icon.py` (Pillow) วาดหน้าจอ monitor + เส้น pulse → `build/monitor.ico` (16–256) — ใช้เป็น icon ของทั้ง 2 exe
 - **UPX**: ดาวน์โหลด release ล่าสุด → `scripts/tools/upx/upx.exe` (build tool — gitignore ไม่ติด commit) แล้วบีบ exe ด้วย `--upx-dir`
 - ตรวจหลัง build: `dist\monitor-agent.exe --server http://127.0.0.1:18080 --token <TOKEN> --interval 15` + รัน `dist\monitor-server.exe` แล้วเปิด WebUI
+- **ทดสอบ exe ครบทุกอย่างอัตโนมัติ**: `scripts\test_exe.bat` (หรือ `scripts\test_exe.ps1 -Port 18089`) — ตรวจ 13 ข้อ (health/WebUI/login/static + API ingest/hosts/tags/metrics/alerts CRUD/export CSV + agent exe push) ด้วย config/data_dir ชั่วคราว แล้วล้างเอง
 
 ## เกณฑ์
 - agent ห้ามมี dependency หนัก — ถ้าใช้ PyInstaller ต้องตรวจ size ≤ ~15MB และรันบนเครื่องไม่มี Python
