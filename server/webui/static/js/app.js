@@ -132,6 +132,7 @@
     renderFleetFiltered();
     updateStatusbar(fleetData);
     Dashboard.fillHostSelect(fleetData);  // อัปเดต dropdown host ใน dashboard
+    Dashboard.renderFleetStats(fleetData); // 统计 Fleet 顶部 (ใช้ข้อมูลทั้งหมด ไม่ใช่ filtered)
     if (fleetTimer) clearInterval(fleetTimer);
     fleetTimer = setInterval(() => loadFleet(true), 10000);
   }

@@ -31,6 +31,36 @@
     return 'var(--accent)';
   }
 
+  // icon OS (SVG กัน emoji render ต่างกัน) — linux/windows/mac หลัก ๆ
+  function osIcon(platform) {
+    const p = (platform || '').toLowerCase();
+    if (p.includes('win')) {
+      return '<span class="os-icon" title="Windows"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1" y="1" width="6.5" height="6.5" fill="#5cb0f7"/><rect x="8.5" y="1" width="6.5" height="6.5" fill="#5cb0f7"/><rect x="1" y="8.5" width="6.5" height="6.5" fill="#5cb0f7"/><rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#5cb0f7"/></svg></span>';
+    }
+    if (p.includes('mac') || p.includes('darwin')) {
+      return '<span class="os-icon" title="macOS"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="#8e8e93"/><path d="M8 2.5v11M2.5 8h11" stroke="#fff" stroke-width="1"/></svg></span>';
+    }
+    // default linux / อื่น
+    return '<span class="os-icon" title="Linux"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M5.5 2.5c-.6 1.5.2 2.6-1 4.5S3 12 5 13.5c1.4 1 3.6.7 4.6-.6 1-1.4.3-3 .3-3.3 0-.4-.5-1.2.1-2.2S11 4 10.2 2.7C9.3 1.4 7.6 1.6 6.9 2c-.6.3-.9.5-1.4.5z" fill="#22a06b"/><circle cx="7.8" cy="4" r="1.1" fill="#fff" opacity=".7"/><path d="M6.8 9.5c.6.5 1.5.5 2 0" stroke="#fff" stroke-width=".7" fill="none" stroke-linecap="round"/></svg></span>';
+  }
+
+  // 统计 Fleet 顶部 — 总数/在线/离线/OS 分布 (看全局一目了然)
+  function renderFleetStats(hosts) {
+    const wrap = document.getElementById('fleetStats');
+    if (!wrap) return;
+    const online = hosts.filter((h) => h.online).length;
+    const offline = hosts.length - online;
+    const countOs = (pred) => hosts.filter(pred).length;
+    const linux = countOs((h) => !(h.platform || '').toLowerCase().includes('win'));
+    const windows = countOs((h) => (h.platform || '').toLowerCase().includes('win'));
+    wrap.innerHTML =
+      '<span class="fleet-stat"><b>' + hosts.length + '</b> เครื่อง</span>' +
+      '<span class="fleet-stat online"><b>' + online + '</b> ออนไลน์</span>' +
+      '<span class="fleet-stat offline"><b>' + offline + '</b> ออฟไลน์</span>' +
+      '<span class="fleet-stat"><b>' + linux + '</b> Linux</span>' +
+      '<span class="fleet-stat"><b>' + windows + '</b> Windows</span>';
+  }
+
   function renderFleetCards(hosts, search = '', tag = '') {
     const grid = document.getElementById('hostGrid');
     let list = hosts.filter((h) => {
@@ -57,7 +87,7 @@
         '<div class="metric-row"><div class="label"><span>' + label + '</span><span>' + formatPercent(pct) + '</span></div>' +
         '<div class="progress"><span style="width:' + (pct || 0) + '%;background:' + fillColor(pct || 0) + '"></span></div></div>';
       return '<div class="card' + (online ? '' : ' offline') + '" data-host="' + escapeHtml(h.host_id) + '">' +
-        '<h3>' + escapeHtml(h.hostname || h.host_id) + ' ' + badge + '</h3>' + tags +
+        '<h3>' + osIcon(h.platform) + '<span class="host-name">' + escapeHtml(h.hostname || h.host_id) + '</span> ' + badge + '</h3>' + tags +
         row('CPU', s.cpu_percent) + row('RAM', s.mem_percent) + row('Disk', s.disk_percent) +
         net +
         '<div class="netline"><span>uptime ' + formatUptime(online ? s.uptime : null) + '</span></div>' +
@@ -236,5 +266,5 @@
     return sel && sel.value ? sel.value : null;
   }
 
-  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect };
+  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect, renderFleetStats };
 })();

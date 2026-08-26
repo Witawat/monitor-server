@@ -113,6 +113,18 @@ body {
 .progress > span { display: block; height: 100%; border-radius: 999px; }
 .netline { font-size: 0.8125rem; color: var(--text-2); margin-top: 10px; display: flex; justify-content: space-between; }
 
+/* ── fleet stats (顶部统计条) ── */
+.fleet-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 16px; }
+.fleet-stat { font-size: 0.875rem; color: var(--text-2); }
+.fleet-stat b { font-size: 1rem; color: var(--text); font-weight: 700; margin-right: 4px; }
+.fleet-stat.online b { color: var(--success); }
+.fleet-stat.offline b { color: var(--danger); }
+
+/* ── OS icon ใน host card ── */
+.os-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
+.os-icon svg { display: block; }
+.card h3 .host-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+
 /* ── KPI ── */
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
 .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
