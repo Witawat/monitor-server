@@ -207,6 +207,7 @@
   }
 
   // ── statusbar ──
+  const CREDIT = ' · พัฒนาโดย <a href="https://github.com/Witawat/monitor-server" target="_blank" rel="noopener">MAKET WITAWAT</a> · <a href="https://github.com/Witawat/monitor-server" target="_blank" rel="noopener">github.com/Witawat/monitor-server</a>';
   let versionPrefix = '';
   function updateStatusbar(hosts) {
     const online = hosts.filter((h) => h.online).length;
@@ -215,7 +216,7 @@
       const m = statusbar.textContent.match(/Monitor v[0-9.]+/);
       versionPrefix = m ? m[0] : 'Monitor';
     }
-    statusbar.textContent = versionPrefix + ' · ' + online + ' host ออนไลน์ · ' + offline + ' ออฟไลน์';
+    statusbar.innerHTML = versionPrefix + ' · ' + online + ' host ออนไลน์ · ' + offline + ' ออฟไลน์' + CREDIT;
   }
 
   // ── user + logout ──

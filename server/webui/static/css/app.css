@@ -216,6 +216,9 @@ select { appearance: auto; }
 .check-group .check input, input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .rule-actions { display: flex; gap: 8px; margin-top: 14px; }
 .login-error { color: var(--danger); font-size: 0.8125rem; margin-top: 8px; min-height: 1em; }
+.login-credit { color: var(--text-2); font-size: 0.75rem; margin-top: 16px; text-align: center; }
+.login-credit a, .statusbar a { color: var(--accent); text-decoration: none; }
+.login-credit a:hover, .statusbar a:hover { text-decoration: underline; }
 
 /* ── ข้อมูล server (หน้า ตั้งค่า) ── */
 .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 8px; }
