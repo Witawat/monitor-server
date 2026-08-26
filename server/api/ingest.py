@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from server.api.deps import client_ip
 from server.ingest import IngestError, IngestService
 from shared.metric import HEADER_TOKEN
 
@@ -22,9 +23,9 @@ async def ingest(request: Request, body: list[dict[str, Any]]) -> JSONResponse:
     """
     service: IngestService = request.app.state.ingest
     token = request.headers.get(HEADER_TOKEN, "")
-    client_ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     try:
-        received, host_id = await service.process_batch(token, client_ip, body)
+        received, host_id = await service.process_batch(token, ip, body)
     except IngestError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=exc.status_code)
     return JSONResponse({"status": "ok", "received": received, "host_id": host_id})

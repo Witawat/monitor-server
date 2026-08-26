@@ -23,6 +23,7 @@ class AgentConfig:
     interval: int = 15
     watch: tuple[str, ...] = ()
     ports: tuple[tuple[int, str], ...] = ()  # ราย (port, name) ที่เฝ้าดูว่าเปิด/ปิด
+    max_batch: int = 100  # ขีดจำกัด snapshot ต่อ request (ตรงกับ server ingest.max_batch_size)
 
     def __post_init__(self) -> None:
         """validate ค่า config ตอนสร้าง."""
@@ -55,6 +56,7 @@ def load_config(argv: list[str] | None = None) -> AgentConfig:
     parser.add_argument("--interval", type=int, default=None, help="รอบเก็บข้อมูล (วินาที)")
     parser.add_argument("--watch", default=_env("WATCH") or "", help="service/process ที่เฝ้าดู คั่นด้วย , เช่น nginx,mysql")
     parser.add_argument("--ports", default=_env("PORTS") or "", help="ราย TCP port ที่เฝ้าดู รูป 80:web,443:https (คั่นด้วย ,)")
+    parser.add_argument("--max-batch", type=int, default=None, help="จำนวน snapshot สูงสุดต่อ request (default 100)")
     args = parser.parse_args(argv)
 
     # ค่า default ที่ยังว่าง → พยายามอ่านจากไฟล์ agent.cfg (ที่ --install เขียนไว้)
@@ -77,12 +79,16 @@ def load_config(argv: list[str] | None = None) -> AgentConfig:
         )
     watch = tuple(n.strip() for n in (args.watch or file_watch).split(",") if n.strip())
     ports = _parse_ports(args.ports or file_ports)
+    max_batch = args.max_batch if args.max_batch is not None else 100
+    if max_batch < 1:
+        raise SystemExit("--max-batch ต้อง >= 1")
     return AgentConfig(
         server_url=server,
         token=token,
         interval=interval,
         watch=watch,
         ports=ports,
+        max_batch=max_batch,
     )
 
 

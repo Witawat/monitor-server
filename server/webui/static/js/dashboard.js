@@ -5,6 +5,7 @@
   const savedRange = localStorage.getItem('monitor.range');
   let currentRange = ['1h','6h','1d','7d','30d','45d'].includes(savedRange) ? savedRange : '1h';
   let selectedMetrics = ['cpu_percent', 'memory.percent'];  // ค่า default: หน่วย % อ่านง่ายสุด
+  let currentHost = null;  // host ที่กำลังดูอยู่ (สำหรับ realtime poll)
   let chart = null;
 
   // metric ที่ plot ได้ (ตรงกับ METRIC_COLUMNS มิติที่ไม่มี disk/net time-series)
@@ -302,11 +303,39 @@
     sel.onchange = () => window.Monitor.setHostId(sel.value);
   }
 
+  const MINUTE_MS = 60000;
+  const HOUR_MS = 3600000;
+  let chartTimer = null;
+  function startHostRefresh(id) {
+    // poll host detail + metrics ทุก 5s (realtime) — ใช้เฉพาะ range เล็ก (1h/6h)
+    if (chartTimer) clearInterval(chartTimer);
+    const refresh = async () => {
+      try {
+        const host = await api('/api/v1/hosts/' + id);
+        if (host.host_id !== id) return;  // host เปลี่ยนไปแล้ว → หยุด
+        const keys = selectedMetrics.length ? selectedMetrics : ['cpu_percent'];
+        const baseUnit = unitOf(keys[0]);
+        const unitKeys = keys.filter((k) => unitOf(k) === baseUnit);
+        const metrics = await api('/api/v1/hosts/' + id + '/metrics?range=' + currentRange + '&metrics=' + unitKeys.join(','));
+        renderKpi(host.summary);
+        renderServices(host.services);
+        renderPorts(host.ports);
+        renderHostAlertHistory(id);
+        renderChart(metrics.series);
+      } catch (e) { /* เงียบ — poll ถัดไปจะลองใหม่ */ }
+    };
+    // range กว้าง (7d/30d/45d) ไม่ต้อง poll ถี่ — ตัดเป็น 1 นาที กันยิง DB บ่อย
+    const period = (currentRange === '1h' || currentRange === '6h') ? 5000 : MINUTE_MS;
+    chartTimer = setInterval(refresh, period);
+  }
+  function stopHostRefresh() { if (chartTimer) { clearInterval(chartTimer); chartTimer = null; } }
+
   async function renderHostView(id) {
     // ถ้าไม่ได้ระบุ id → ใช้ค่า dropdown ปัจจุบัน หรือ host แรกจาก fleet
     const sel = document.getElementById('hostSelect');
     if (!id && sel && sel.value) id = sel.value;
     if (!id) return;
+    stopHostRefresh();  // หยุด poll ของ host ก่อนหน้า (กันเรียกซ้ำ/หาย)
     try {
       const host = await api('/api/v1/hosts/' + id);
       // metric ที่เลือก (ต้องหน่วยเดียวกัน) — ส่งหลายตัวคั่น comma
@@ -334,6 +363,8 @@
       renderHostAlertHistory(id);
       renderMetricChips();
       renderChart(metrics.series);
+      currentHost = id;
+      startHostRefresh(id);   // realtime: poll ทุก 5s (range เล็ก) / 1 นาที (range กว้าง)
     } catch (e) { toast('error', e.message); }
   }
 

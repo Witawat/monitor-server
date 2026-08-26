@@ -769,7 +769,9 @@ class Database:
         for h in hosts:
             host_id = str(h["host_id"])
             last = await self._rollup_last_bucket(interval_name, host_id)
-            start_ts = last + interval_sec if last else 0
+            # last เป็น bucket ขอบบนที่ rollup ไปแล้ว (floor(ts/interval)*interval) —
+            # เริ่มที่ last (ไม่ +interval) กันตกขอบ 1 จุดตรงจุดตัด bucket ใหม่
+            start_ts = last if last else 0
             end_ts = ((now - interval_sec) // interval_sec) * interval_sec + interval_sec
             if start_ts > end_ts:
                 continue
@@ -841,6 +843,7 @@ class Database:
         await conn.execute("DELETE FROM disk_samples WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM net_samples WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM service_samples WHERE host_id = ?", (host_id,))
+        await conn.execute("DELETE FROM port_samples WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM alert_history WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM hosts WHERE host_id = ?", (host_id,))
         await conn.commit()
@@ -1053,5 +1056,6 @@ class Database:
         await conn.execute("DELETE FROM disk_samples WHERE ts < ?", (cutoff,))
         await conn.execute("DELETE FROM net_samples WHERE ts < ?", (cutoff,))
         await conn.execute("DELETE FROM service_samples WHERE ts < ?", (cutoff,))
+        await conn.execute("DELETE FROM port_samples WHERE ts < ?", (cutoff,))
         await conn.commit()
         return cur.rowcount

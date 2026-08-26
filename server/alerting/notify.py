@@ -17,17 +17,22 @@ class Notifier:
 
         self._config = config
 
-    async def send(self, payload: dict[str, Any]) -> list[str]:
-        """ส่ง payload ไปทุก channel ที่ตั้งค่า; คืนชื่อ channel ที่ลองส่ง."""
+    async def send(self, payload: dict[str, Any], channels: list[str] | None = None) -> list[str]:
+        """ส่ง payload ไป channel ที่ตั้งค่า; คืนชื่อ channel ที่ลองส่ง.
+
+        Args:
+            payload: ข้อมูล alert ที่จะส่ง.
+            channels: เฉพาะ channel ที่ส่ง (เช่น ["webhook"]) — ว่าง/None = ส่งทุก channel ที่ตั้งค่า.
+        """
 
         sent: list[str] = []
         webhook_url = (self._config.webhook or {}).get("url", "")
-        if webhook_url:
+        if (channels is None or "webhook" in channels) and webhook_url:
             await self._post_webhook(webhook_url, payload)
             sent.append("webhook")
         bot_token = (self._config.telegram or {}).get("bot_token", "")
         chat_id = (self._config.telegram or {}).get("chat_id", "")
-        if bot_token and chat_id:
+        if (channels is None or "telegram" in channels) and bot_token and chat_id:
             await self._post_telegram(bot_token, chat_id, payload)
             sent.append("telegram")
         return sent

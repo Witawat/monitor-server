@@ -43,7 +43,7 @@ def test_offline_queues_then_flush_on_reconnect(tmp_path):
     url_online = f"http://127.0.0.1:{server.server_address[1]}"
 
     try:
-        _flush_queue(q, url_online, "tok")
+        _flush_queue(q, url_online, "tok", 100)
         assert q.count() == 0  # ส่งสำเร็จ → ล้าง queue
         assert len(_Handler.received) == 1  # ส่ง 1 ครั้ง (ทั้ง batch)
     finally:

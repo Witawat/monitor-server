@@ -105,3 +105,19 @@ async def test_rate_limit(service):
     await service.process_batch("tok", "9.9.9.9", _batch())
     with pytest.raises(RateLimited):
         await service.process_batch("tok", "9.9.9.9", _batch())
+
+
+async def test_empty_token_rejected(service):
+    """token ว่าง → UnauthorizedToken (กันยึด identity host ที่ revoke แล้ว)."""
+
+    with pytest.raises(UnauthorizedToken):
+        await service.process_batch("", "1.1.1.1", _batch())
+
+
+async def test_revoked_host_cannot_be_adopted_with_empty_token(service):
+    """host ที่ revoke (token='') ต่อให้ส่ง token ว่าง ก็ไม่ยึด identity กลับมาได้."""
+
+    await service._db.set_host_token("h1", "tok-real")
+    await service._db.revoke_token("h1")   # token กลายเป็น ''
+    with pytest.raises(UnauthorizedToken):
+        await service.process_batch("", "1.1.1.1", _batch(host_id="h1"))

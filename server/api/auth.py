@@ -7,7 +7,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 
-from server.api.deps import SESSION_COOKIE, require_admin
+from server.api.deps import SESSION_COOKIE, client_ip, require_admin
 from server.ingest import RateLimiter
 from server.storage.db import Database
 from server.webui.auth import sign_session, verify_password
@@ -25,9 +25,9 @@ async def login(
 ) -> dict[str, Any]:
     """ตรวจ username/password กับ config; ผ่าน → ตั้ง HttpOnly cookie."""
 
-    client_ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     limiter: RateLimiter = request.app.state.login_limiter
-    if not limiter.allow(client_ip, _LOGIN_LIMIT_PER_MIN):
+    if not limiter.allow(ip, _LOGIN_LIMIT_PER_MIN):
         raise HTTPException(status_code=429, detail="ลองเข้าสู่ระบบถี่เกินไป กรุณารอสักครู่")
     cfg = request.app.state.config
     username = body.get("username", "")

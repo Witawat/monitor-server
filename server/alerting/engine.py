@@ -78,6 +78,7 @@ class AlertEngine:
         now = now or int(time.time())
         rules = await self._db.list_rules(enabled_only=True)
         events: list[dict[str, Any]] = []
+        active_keys: set[tuple[int, str]] = set()
         for rule in rules:
             duration = parse_duration(rule["duration"])
             if duration <= 0:
@@ -90,6 +91,7 @@ class AlertEngine:
                     continue
                 ok = _OPS[rule["op"]](value, rule["threshold"])
                 key = (int(rule["id"]), snap.host_id)
+                active_keys.add(key)
                 state = self._state.get(key)
                 if not ok:
                     self._state.pop(key, None)
@@ -112,6 +114,10 @@ class AlertEngine:
                         "op": rule["op"],
                         "created_at": now,
                     }
-                    await self._notifier.send(payload)
+                    await self._notifier.send(payload, channels=rule.get("notify") or None)
                     events.append(payload)
+        # prune state ค้าง (rule ถูกลบ/disabled, หรือ host ไม่ได้ evaluate อีก) — กัน RAM โต
+        stale = [k for k in self._state if k not in active_keys]
+        for k in stale:
+            self._state.pop(k, None)
         return events

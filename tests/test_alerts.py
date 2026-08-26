@@ -85,7 +85,7 @@ async def test_engine_fires_after_duration(db):
     fired: list[dict] = []
 
     class FakeNotifier:
-        async def send(self, payload):
+        async def send(self, payload, channels=None):
             fired.append(payload)
 
     engine = AlertEngine(db, cfg, notifier=FakeNotifier())
@@ -127,6 +127,26 @@ async def test_engine_resets_when_normal(db):
     await engine.evaluate([_snap(cpu=10.0)], now=t0 + 5)   # กลับปกติ → reset
     events = await engine.evaluate([_snap(cpu=95.0)], now=t0 + 10)  # arming ใหม่
     assert events == []
+
+
+async def test_notifier_sends_only_rule_channels(db):
+    """rule ระบุ notify=[webhook] → engine ส่งเฉพาะ webhook ไม่ส่งทุก channel."""
+
+    cfg = AppConfig()
+    await db.create_rule(
+        {"name": "CPU", "host_id": "", "metric": "cpu_percent", "op": ">", "threshold": 90.0, "duration": "1s", "notify": ["webhook"]}
+    )
+    sent_channels: list[list[str] | None] = []
+
+    class FakeNotifier:
+        async def send(self, payload, channels=None):
+            sent_channels.append(channels)
+
+    engine = AlertEngine(db, cfg, notifier=FakeNotifier())
+    now = int(time.time())
+    await engine.evaluate([_snap(cpu=95.0)], now=now)          # arming
+    await engine.evaluate([_snap(cpu=96.0)], now=now + 2)       # fire
+    assert sent_channels == [["webhook"]]
 
 
 async def test_notifier_webhook(webhook_server):

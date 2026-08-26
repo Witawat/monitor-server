@@ -98,6 +98,11 @@ class IngestService:
         if not raw:
             raise InvalidBatch("batch ว่าง")
 
+        if not token:
+            # token ว่าง = ไม่ระบุตัวตน — ไม่อนุญาตให้ auto-register (กันยึด identity
+            # ของ host ที่ revoke แล้ว ซึ่งถูกตั้ง token='')
+            raise UnauthorizedToken("ต้องระบุ X-Agent-Token")
+
         host = await self._db.host_by_token(token)
         if host is None:
             if not self._config.auth.allow_registration:

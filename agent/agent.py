@@ -13,7 +13,7 @@ from typing import Any
 from agent import collect, selfinstall
 from agent.config import AgentConfig, load_config
 from agent.push import Backoff, PushQueue, push_batch_status
-from shared.metric import MAX_BATCH_SIZE, snapshot_to_dict
+from shared.metric import snapshot_to_dict
 
 # ── helpers ──
 
@@ -28,15 +28,15 @@ def _default_state_dir() -> Path:
     return Path.home() / ".monitor-agent"
 
 
-def _flush_queue(queue: PushQueue, url: str, token: str) -> None:
-    """ลองส่งข้อมูลค้างใน queue เป็น chunk (ไม่เกิน MAX_BATCH_SIZE ต่อครั้ง)."""
+def _flush_queue(queue: PushQueue, url: str, token: str, batch_size: int) -> None:
+    """ลองส่งข้อมูลค้างใน queue เป็น chunk (ไม่เกิน batch_size ต่อครั้ง)."""
 
     pending = queue.pending()
     if not pending:
         return
     ok = True
-    for i in range(0, len(pending), MAX_BATCH_SIZE):
-        chunk = pending[i : i + MAX_BATCH_SIZE]
+    for i in range(0, len(pending), batch_size):
+        chunk = pending[i : i + batch_size]
         if not (200 <= push_batch_status(url, token, chunk) < 300):
             ok = False
             break
@@ -58,17 +58,34 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
     fail_streak = 0
 
     while True:
-        batch: list[dict[str, Any]] = [snapshot_to_dict(collect.snapshot(host_id, watch=config.watch, ports=list(config.ports)))]
-        status = push_batch_status(config.server_url, config.token, batch)
+        try:
+            snap = collect.snapshot(host_id, watch=config.watch, ports=list(config.ports))
+            batch: list[dict[str, Any]] = [snapshot_to_dict(snap)]
+            status = push_batch_status(config.server_url, config.token, batch)
+        except Exception as exc:  # noqa: BLE001 - ไม่ให้ loop ตายเพราะ provider/network พลาดชั่วคราว
+            # collect/push ยกเว้น (อ่าน /proc พลาด, psutil พลาด, json พัง) → ข้ามรอบนี้ + backoff
+            print(f"[agent] collect/push พลาด: {exc!r}"
+                  f" — retry ใน {config.interval}s")
+            fail_streak += 1
+            time.sleep(backoff.delay(fail_streak))
+            continue
+
         if status in (401, 403):
             # token/config ผิด — ไม่มีทางหาย อย่า retry ตลอดไป
             raise SystemExit(f"server ตอบ {status} — token ไม่ถูกต้อง ตรวจ config แล้วลองใหม่")
         if 200 <= status < 300:
             fail_streak = 0
-            _flush_queue(queue, config.server_url, config.token)
+            _flush_queue(queue, config.server_url, config.token, config.max_batch)
             delay: float = config.interval
+        elif status == 0 or status >= 500 or status == 429:
+            # offline / server พลาดชั่วคราว (5xx) / rate-limited → เก็บ queue + backoff
+            queue.enqueue(batch)
+            fail_streak += 1
+            delay = backoff.delay(fail_streak)
         else:
-            queue.enqueue(batch)  # กันข้อมูลหายตอน server offline
+            # 4xx (400/404/...) = client ผิด (URL/body/schema) — อย่าเก็บ queue วนซ้ำ
+            # โยนทิ้ง batch นี้ แล้วหน่วงสั้น ๆ และแจ้ง
+            print(f"[agent] server ตอบ {status} — batch ถูกละทิ้ง (ไม่ retry)")
             fail_streak += 1
             delay = backoff.delay(fail_streak)
         time.sleep(delay)
