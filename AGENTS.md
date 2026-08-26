@@ -67,7 +67,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - [x] Fleet dashboard: รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์
 - [x] กราฟย้อนหลัง per metric (time-series SQLite + rollup เก็บ 1m/5m/1h/1d) — ดูย้อนหลังได้สูงสุด 45 วัน (`retention_raw_days`, default 45)
 - [x] Agent push: batch + retry + backoff + queue เมื่อ offline (เก็บในเครื่องแล้วส่งทีหลัง)
-- [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram/email) + host-down
+- [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram) + host-down
 - [x] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token
 - [x] Auth/security: API token ต่อ host (X-Agent-Token), rate limit ingest + login, CSP headers
 
@@ -115,7 +115,7 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - กฎ UI ยึด `docs/WEBUI_DESIGN.md` — responsive 360/768/1280, `font-size: clamp`, Chart.js bundle local (ไม่ใช้ CDN)
 
 ## ข้อแนะนำเพิ่มเติม (จากโจทย์ "แนะนำเพิ่มได้")
-- alerting + notify (webhook/Telegram/email) + alert history + ack
+- alerting + notify (webhook/Telegram) + alert history + ack
 - กราฟย้อนหลังแบบ rollup (1m/5m/1h/1d) + export CSV
 - ติดตาม service/process บน host (agent เช็ค up/down)
 - grouping/tag host (env=prod, location=th) + filter dashboard

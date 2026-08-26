@@ -115,9 +115,9 @@
             body.innerHTML = '<p class="empty-note">ยังไม่มีกฎ alert</p>';
             return;
           }
-          body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th><th></th></tr></thead><tbody>' +
+          body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th><th class="actions"></th></tr></thead><tbody>' +
             rulesF.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id ? hostName(r.host_id) : 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td>' +
-              '<td><button class="btn" data-edit="' + r.id + '">แก้</button> <button class="btn danger" data-del="' + r.id + '">ลบ</button></td></tr>').join('') +
+              '<td class="actions"><button class="btn" data-edit="' + r.id + '">แก้</button> <button class="btn danger" data-del="' + r.id + '">ลบ</button></td></tr>').join('') +
             '</tbody></table>';
           body.querySelectorAll('[data-edit]').forEach((btn) => {
             btn.onclick = () => {
@@ -133,13 +133,13 @@
             body.innerHTML = '<p class="empty-note">ยังไม่มีประวัติ alert</p>';
             return;
           }
-          body.innerHTML = '<table><thead><tr><th>เวลา</th><th>Host</th><th>Metric</th><th>ค่า</th><th></th></tr></thead><tbody>' +
+          body.innerHTML = '<table><thead><tr><th>เวลา</th><th>Host</th><th>Metric</th><th>ค่า</th><th class="actions"></th></tr></thead><tbody>' +
             historyF.map((h) =>
               '<tr data-id="' + h.id + '" style="' + (h.ack ? 'opacity:.6' : '') + '">' +
               '<td>' + new Date(h.created_at * 1000).toLocaleString('th-TH') + '</td>' +
               '<td>' + escapeHtml(hostName(h.host_id)) + '</td><td>' + escapeHtml(h.metric) + '</td>' +
               '<td>' + escapeHtml(h.value) + ' (เกิน ' + escapeHtml(h.threshold) + ')</td>' +
-              '<td>' + (h.ack ? '<span class="badge online">ack ✓</span>' : '<button class="btn" data-ack="' + h.id + '">ack</button>') + '</td>' +
+              '<td class="actions">' + (h.ack ? '<span class="badge online">ack ✓</span>' : '<button class="btn" data-ack="' + h.id + '">ack</button>') + '</td>' +
               '</tr>'
             ).join('') + '</tbody></table>';
           body.querySelectorAll('[data-ack]').forEach((btn) => {
@@ -173,7 +173,7 @@
       } else {
         tbody.innerHTML = tokens.map((t) =>
           '<tr><td>' + t.host_id + '</td><td><code>' + (t.token || '—') + '</code></td>' +
-          '<td><button class="btn danger" data-revoke="' + t.host_id + '">revoke</button></td></tr>'
+          '<td class="actions"><button class="btn danger" data-revoke="' + t.host_id + '">revoke</button></td></tr>'
         ).join('');
       }
       tbody.querySelectorAll('[data-revoke]').forEach((btn) => {
