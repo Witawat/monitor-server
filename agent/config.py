@@ -48,6 +48,8 @@ def load_config(argv: list[str] | None = None) -> AgentConfig:
     """
     parser = argparse.ArgumentParser(prog="monitor-agent", description="monitor agent")
     parser.add_argument("--config", default="", help="เส้นทางไฟล์ agent.cfg (default ข้าง exe/runtime)")
+    parser.add_argument("--install", action="store_true", help="ติดตั้งเป็น service (เขียน agent.cfg + NSSM/systemd)")
+    parser.add_argument("--uninstall", action="store_true", help="ลบ service")
     parser.add_argument("--server", default=_env("SERVER_URL") or None, help="URL ของ server เช่น http://127.0.0.1:18080")
     parser.add_argument("--token", default=_env("TOKEN") or None, help="agent token")
     parser.add_argument("--interval", type=int, default=None, help="รอบเก็บข้อมูล (วินาที)")

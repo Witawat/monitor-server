@@ -74,7 +74,7 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
         time.sleep(delay)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """Entry — self-install หรือ รัน loop ตาม config (arg/env/ไฟล์).
 
     Usage:
@@ -84,11 +84,14 @@ def main() -> None:
         `python -m agent.agent` → รัน loop อ่าน config จาก arg/env/ไฟล์
     """
 
-    import argparse
     import sys
 
-    # ตรวจ subcommand ก่อน (--install/--uninstall) — ถ้าไม่ใช่ ปล่อยให้ load_config() จัดการ argv เอง
-    if "--install" in sys.argv or "--uninstall" in sys.argv:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+
+    # ถ้าเป็น subcommand install/uninstall → จัดการเอง (ไม่ให้ load_config require server/token)
+    if "--install" in argv_list or "--uninstall" in argv_list:
+        import argparse
+
         parser = argparse.ArgumentParser(prog="monitor-agent", description="monitor agent")
         parser.add_argument("--install", action="store_true", help="ติดตั้งเป็น service (เขียน agent.cfg + NSSM/systemd)")
         parser.add_argument("--uninstall", action="store_true", help="ลบ service")
@@ -98,38 +101,25 @@ def main() -> None:
         parser.add_argument("--interval", type=int, default=15, help="รอบเก็บ (วินาที)")
         parser.add_argument("--ports", default="", help="ราย TCP port เช่น 80:web,443:https")
         parser.add_argument("--watch", default="", help="service ที่เฝ้า เช่น nginx,mysql")
-        args = parser.parse_args()
+        args = parser.parse_args(argv_list)
         if args.uninstall:
             selfinstall.uninstall()
             return
         if not args.server or not args.token:
             parser.error("--install ต้องระบุ --server และ --token")
-        args.config = args.config or ""
+        cfg_payload: dict[str, str] = {
+            "server_url": args.server,
+            "token": args.token,
+            "interval": str(args.interval),
+            "ports": args.ports,
+            "watch": args.watch,
+        }
         if args.config:
-            # ใช้ config path ที่ระบุ → ไป selfinstall ใช้ path เดียวกัน
-            selfinstall.install(
-                {
-                    "server_url": args.server,
-                    "token": args.token,
-                    "interval": str(args.interval),
-                    "ports": args.ports,
-                    "watch": args.watch,
-                    "config": args.config,
-                }
-            )
-        else:
-            selfinstall.install(
-                {
-                    "server_url": args.server,
-                    "token": args.token,
-                    "interval": str(args.interval),
-                    "ports": args.ports,
-                    "watch": args.watch,
-                }
-            )
+            cfg_payload["config"] = args.config
+        selfinstall.install(cfg_payload)
         return
     # โหมดรันปกติ — load_config() อ่าน argv/env/ไฟล์ เอง
-    run(load_config())
+    run(load_config(argv_list))
 
 
 if __name__ == "__main__":
