@@ -191,7 +191,11 @@ select { appearance: auto; }
 
 /* input ที่อยู่ใน toolbar/grid — ให้มีขนาด/งัดแบบเดียวกัน (compact) */
 .toolbar input, .rule-grid input, .toolbar select { padding: 6px 10px; }
-.field input, .field select { padding: 8px 12px; }
+.field input, .field select {
+  padding: 8px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
 .search input { padding: 8px 12px; }
 
 /* ── ฟอร์ม alert rule: grid + checkbox notify (WEBUI_DESIGN.md §8.1) ── */

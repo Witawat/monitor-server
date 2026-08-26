@@ -15,7 +15,11 @@
           password: document.getElementById('password').value,
         }),
       });
-      if (res.ok) { location.href = '/#/fleet'; }
+      if (res.ok) {
+        // ไป hash fleet แล้ว reload ใหม่ — บังคับ server ส่ง base.html (SPA) เพราะ hash เปลี่ยนไม่ทำให้หน้าใหม่
+        window.location.hash = '#/fleet';
+        window.location.reload();
+      }
       else { err.textContent = 'username หรือ password ไม่ถูกต้อง'; }
     } catch (ex) {
       err.textContent = 'เชื่อมต่อ server ไม่ได้';
