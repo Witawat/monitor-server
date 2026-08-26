@@ -11,7 +11,8 @@ from server.alerting.offline import HostDownMonitor
 from server.config import AppConfig
 from server.main import create_app
 from server.storage.db import Database
-from server.webui.auth import hash_password
+from server.webui.auth import hash_password, sign_session
+from shared.metric import ServiceSample, Snapshot
 
 # ── fixtures ──
 
@@ -105,13 +106,14 @@ def test_export_csv(tmp_path):
 # ── feature 4: host-down notification ──
 
 async def test_host_down_fires_notification(db):
-    """host offline เกิน timeout → บันทึก history + ส่ง notifier."""
+    """host offline เกิน timeout (เคยมีข้อมูล) → บันทึก history + ส่ง notifier."""
 
     cfg = AppConfig()
     cfg.alerting.enabled = True
     cfg.ingest.offline_timeout_sec = 60
     old = int(time.time()) - 1000
     await db.upsert_host("gone-1", "gone", "linux", "tok", now=old)
+    await db.insert_batch([Snapshot(host_id="gone-1", hostname="gone", platform="linux", ts=old)])
     fired: list[dict] = []
 
     class FakeNotifier:
@@ -150,3 +152,87 @@ def test_security_headers(tmp_path):
         assert r.headers.get("content-security-policy", "").startswith("default-src 'self'")
         assert r.headers.get("x-content-type-options") == "nosniff"
         assert r.headers.get("x-frame-options") == "DENY"
+
+
+# ── regression ครอบ bug audit ──
+
+def test_token_takeover_rejected(tmp_path):
+    """H2: host ที่มีอยู่แล้ว + token ใหม่ → ไม่อนุญาตแย่งชิง."""
+
+    cfg = AppConfig()
+    cfg.server.data_dir = str(tmp_path)
+    cfg.webui.admin_pass_hash = hash_password("secretpw")
+    with TestClient(create_app(cfg)) as c:
+        c.cookies.set("session", sign_session(c.app.state.session_secret, "admin"))
+        # ลงทะเบียน h1 ด้วย token A
+        assert c.post("/api/v1/ingest", json=_ingest_batch(), headers={"X-Agent-Token": "tokA"}).status_code == 200
+        # ลองแย่งด้วย token B → host มีอยู่แล้ว → 400
+        r = c.post("/api/v1/ingest", json=_ingest_batch(), headers={"X-Agent-Token": "tokB"})
+        assert r.status_code == 400
+        # token เดิมยังใช้ได้
+        assert c.post("/api/v1/ingest", json=_ingest_batch(), headers={"X-Agent-Token": "tokA"}).status_code == 200
+
+
+async def test_delete_host_removes_services_and_history(db):
+    """M3: delete_host ลบ service_samples + alert_history ด้วย."""
+
+    await db.upsert_host("h1", "h1", "linux", "tok", now=100)
+    snap = Snapshot(host_id="h1", hostname="h1", platform="linux", ts=int(time.time()), services=[ServiceSample(name="nginx", up=True)])
+    await db.insert_batch([snap])
+    await db.add_history(1, "h1", "cpu_percent", 95.0, 90.0)
+    assert await db.delete_host("h1") is True
+    assert await db.latest_services("h1") == []
+    assert await db.list_history(host_id="h1") == []
+
+
+async def test_retention_removes_services(db):
+    """M1: retention_cleanup ลบ service_samples เก่าด้วย."""
+
+    await db.upsert_host("h1", "h1", "linux", "tok", now=100)
+    old = int(time.time()) - 999999
+    await db.insert_batch([Snapshot(host_id="h1", hostname="h1", platform="linux", ts=old, services=[ServiceSample(name="x", up=True)])])
+    await db.retention_cleanup(keep_days=7)
+    assert await db.latest_services("h1") == []
+
+
+async def test_offline_skips_host_without_data(db):
+    """M5: host ที่ยังไม่เคยส่ง snapshot → ไม่นับเป็น offline."""
+
+    cfg = AppConfig()
+    cfg.ingest.offline_timeout_sec = 60
+    await db.upsert_host("newbie", "new", "linux", "tok", now=int(time.time()) - 1000)
+    fired = []
+    monitor = HostDownMonitor(db, cfg, notifier=_FakeNotifier(fired))
+    assert await monitor.check() == []
+    assert fired == []
+
+
+async def test_offline_no_refire_across_instances(db):
+    """M5: persist fired state → monitor ใหม่ (หลัง restart) ไม่ยิงซ้ำ."""
+
+    cfg = AppConfig()
+    cfg.ingest.offline_timeout_sec = 60
+    now = int(time.time())
+    await db.upsert_host("gone", "gone", "linux", "tok", now=now - 1000)
+    await db.insert_batch([Snapshot(host_id="gone", hostname="gone", platform="linux", ts=now - 1000)])
+
+    fired1 = []
+    m1 = HostDownMonitor(db, cfg, notifier=_FakeNotifier(fired1))
+    ev1 = await m1.check()
+    assert len(ev1) == 1  # fire ครั้งแรก
+
+    fired2 = []
+    m2 = HostDownMonitor(db, cfg, notifier=_FakeNotifier(fired2))  # จำลอง restart
+    ev2 = await m2.check()
+    assert ev2 == []  # ไม่ยิงซ้ำ (state อยู่ใน DB)
+    assert fired2 == []
+
+
+class _FakeNotifier:
+    """Notifier จำลองบันทึก payload."""
+
+    def __init__(self, sink):
+        self._sink = sink
+
+    async def send(self, payload):
+        self._sink.append(payload)

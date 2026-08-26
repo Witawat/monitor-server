@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -17,6 +18,7 @@ router = APIRouter(
 )
 
 _RANGE_SEC: dict[str, int] = {"1h": 3600, "6h": 21600, "1d": 86400, "7d": 604800}
+_SAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 _EXPORT_METRICS = [
     "cpu_percent",
@@ -67,7 +69,7 @@ async def export_csv(request: Request, host_id: str, range: Annotated[str, Query
     for r in rows:
         writer.writerow([r["ts"]] + [r.get(METRIC_COLUMNS[m], "") for m in _EXPORT_METRICS])
 
-    filename = f"{host_id}_{range}.csv"
+    filename = f"{_SAFE_FILENAME.sub('_', host_id) or 'host'}_{range}.csv"
     return Response(
         content=buf.getvalue(),
         media_type="text/csv",

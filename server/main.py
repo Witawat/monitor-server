@@ -7,8 +7,9 @@ import secrets
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,18 +19,40 @@ from server.alerting import AlertEngine
 from server.alerting.offline import HostDownMonitor
 from server.api.alerts import router as alerts_router
 from server.api.auth import router as auth_router
-from server.api.deps import SESSION_COOKIE
+from server.api.deps import SESSION_COOKIE, require_admin
 from server.api.hosts import router as hosts_router
 from server.api.ingest import router as ingest_router
 from server.api.metrics import router as metrics_router
 from server.config import AppConfig, load_config
-from server.ingest import IngestService
+from server.ingest import IngestService, RateLimiter
+from server.maintenance import RetentionWorker
 from server.storage.db import Database
 from server.webui.auth import verify_session
 
 _BASE_DIR = Path(__file__).resolve().parent
 _TEMPLATES = Jinja2Templates(directory=str(_BASE_DIR / "webui" / "templates"))
 
+
+def _resolve_secret(configured: str, data_dir: Path) -> str:
+    """คืน secret_key ให้คงที่ข้าม restart: ถ้า config ว่าง ใช้/สร้างจาก state.json."""
+
+    if configured:
+        return configured
+    state_path = data_dir / "state.json"
+    if state_path.exists():
+        try:
+            import json
+
+            return str(json.loads(state_path.read_text(encoding="utf-8")).get("session_secret", ""))
+        except (ValueError, OSError):
+            pass
+    secret = secrets.token_hex(32)
+    import json
+    from contextlib import suppress
+
+    with suppress(OSError):
+        state_path.write_text(json.dumps({"session_secret": secret}), encoding="utf-8")
+    return secret
 # ── app factory ──
 
 
@@ -40,12 +63,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cfg = config or AppConfig()
         app.state.config = cfg
-        app.state.session_secret = cfg.webui.secret_key or secrets.token_hex(32)
-        from server.ingest import RateLimiter
-
-        app.state.login_limiter = RateLimiter()
         data_dir = Path(cfg.server.data_dir)
         data_dir.mkdir(parents=True, exist_ok=True)
+        app.state.session_secret = _resolve_secret(cfg.webui.secret_key, data_dir)
+        app.state.login_limiter = RateLimiter()
         db = Database(data_dir / "monitor.db")
         await db.connect()
         app.state.db = db
@@ -56,7 +77,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         offline = HostDownMonitor(db, cfg)
         app.state.offline = offline
         offline.start()
+        retention = RetentionWorker(db, cfg.storage.retention_raw_days)
+        app.state.retention = retention
+        retention.start()
         yield
+        await retention.stop()
         await offline.stop()
         await db.close()
 
@@ -106,8 +131,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return JSONResponse({"status": "ok", "version": __version__})
 
     @app.get("/api/status")
-    async def status() -> JSONResponse:
-        """คืนสถานะ server + config + จำนวน host (สำหรับ debug/ops)."""
+    async def status(
+        _: Annotated[str, Depends(require_admin)]
+    ) -> JSONResponse:
+        """คืนสถานะ server + config + จำนวน host (ต้อง login)."""
 
         cfg = app.state.config
         db: Database = app.state.db

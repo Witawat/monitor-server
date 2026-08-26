@@ -3,6 +3,16 @@
 
 function isEmpty(v) { return v === undefined || v === null || v === '' || Number.isNaN(v); }
 
+function escapeHtml(v) {
+  if (v === undefined || v === null) return '';
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function formatPercent(v) {
   if (isEmpty(v)) return '—';
   return v.toFixed(1) + '%';

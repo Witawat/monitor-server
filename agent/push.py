@@ -75,12 +75,11 @@ class Backoff:
         return min(self._base * (self._factor ** attempt), self._max)
 
 
-def push_batch(url: str, token: str, batch: list[dict[str, Any]], timeout: float = _TIMEOUT_SEC) -> bool:
-    """POST batch ไป server; คืน True ถ้าได้รับ 2xx.
+def push_batch_status(
+    url: str, token: str, batch: list[dict[str, Any]], timeout: float = _TIMEOUT_SEC
+) -> int:
+    """POST batch ไป server; คืน HTTP status code (0 = network/offline error)."""
 
-    Raises:
-        OSError: ถ้าเชื่อมต่อ/server ไม่ตอบ (network/offline).
-    """
     data = json.dumps(batch).encode("utf-8")
     req = urllib.request.Request(
         url.rstrip("/") + INGEST_PATH,
@@ -90,8 +89,14 @@ def push_batch(url: str, token: str, batch: list[dict[str, Any]], timeout: float
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return bool(200 <= resp.status < 300)
+            return int(resp.status)
     except urllib.error.HTTPError as exc:
-        return bool(200 <= exc.code < 300)
+        return int(exc.code)
     except OSError:
-        return False  # offline / connection refused / timeout
+        return 0  # offline / connection refused / timeout
+
+
+def push_batch(url: str, token: str, batch: list[dict[str, Any]], timeout: float = _TIMEOUT_SEC) -> bool:
+    """POST batch ไป server; คืน True ถ้าได้รับ 2xx."""
+
+    return 200 <= push_batch_status(url, token, batch, timeout) < 300

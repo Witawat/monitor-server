@@ -56,8 +56,11 @@ class RateLimiter:
 
         now = time.monotonic()
         recent = [t for t in self._hits.get(key, []) if now - t < self._window]
+        if not recent:
+            self._hits.pop(key, None)  # กันค้าง key ที่หมดอายุ (L1)
         if limit_per_min <= 0 or len(recent) >= limit_per_min:
-            self._hits[key] = recent
+            if recent:
+                self._hits[key] = recent
             return False
         recent.append(now)
         self._hits[key] = recent
@@ -100,6 +103,9 @@ class IngestService:
             if not self._config.auth.allow_registration:
                 raise UnauthorizedToken("token ไม่รู้จัก")
             host_id = self._auto_host_id(raw)
+            if await self._db.host_exists(host_id):
+                # กันแย่งชิง identity: host_id มีอยู่แล้วแต่ token ต่าง → ไม่ adopt
+                raise InvalidBatch("host_id มีอยู่แล้ว — ใช้ token เดิมของ host นี้")
             hostname = str(raw[0].get("hostname", ""))
             platform = str(raw[0].get("platform", ""))
         else:

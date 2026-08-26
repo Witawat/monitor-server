@@ -109,3 +109,40 @@
 - [x] export CSV ต่อ metric
 - [x] uptime/availability + notification เมื่อ host หาย
 - [x] rate-limit login + CSP/security headers WebUI
+
+---
+
+## เฟส 6 — QA / Bug-fix + Build EXE (icon + UPX)
+
+### เป้าหมาย
+- ล้าง bug ที่พบในการ audit (HIGH+MED+LOW คุ้มค่า) + ตรวจ layout WebUI ไม่เพี้ยน (Playwright 360/768/1280)
+- Build `monitor-server.exe` + `monitor-agent.exe` (PyInstaller onefile) พร้อม icon "monitor + pulse" + บีบด้วย UPX ล่าสุด
+
+### Bug ที่พบ & แก้
+| ระดับ | ปัญหา | แก้ |
+|-------|-------|-----|
+| HIGH | H1 หน้า login พัง (CSP บล็อก inline script) | ย้ายไป `static/js/login.js` |
+| HIGH | H2 auto-register แย่งชิง token host เดิม | host_id มีอยู่แล้ว → 409 ไม่อัปเดต token |
+| HIGH | H3 stored XSS (host_id/hostname) | `escapeHtml()` ใน format.js |
+| MED | M1 retention dead code + ไม่ลบ service/history | background task + ลบครบ |
+| MED | M3 delete_host orphan service/history | ลบครบทุกตาราง |
+| MED | M4 agent queue > max_batch ติดตาย | chunk flush |
+| MED | M5 offline monitor re-fire + fire host ยังไม่เคย online | ข้าม host ไร้ข้อมูล + persist fired |
+| MED | M6 session secret สุ่มใหม่ทุก boot | เก็บ state.json |
+| MED | M7 /api/status ไม่มี auth | ใส่ require_admin |
+| MED | M8 chart instance leak | destroy ก่อนวาดใหม่ |
+| MED | M9 fleet/net/disk แสดงผิด (summary ขาด field) | เพิ่ม net/disk ใน summary |
+| MED | M10 header injection host_id (export) | sanitize filename |
+| LOW | L1/L3/L5/L6/L7/L8 + chart x-axis แสดง epoch | ทำครบ |
+
+### Build EXE
+- icon: `scripts/make_icon.py` (Pillow) → `build/monitor.ico` (16–256)
+- UPX: ดาวน์โหลดล่าสุด → `scripts/tools/upx/upx.exe` (`--upx-dir`)
+- PyInstaller: server (`--add-data server\webui`) + agent (`--icon`, onefile)
+- ตรวจ exe รันได้ + WebUI/login ใช้ได้ + size/อัตราบีบ
+
+**เช็กลิสต์:**
+- [x] login + ทุก view ใช้งานได้, layout 360/768/1280 ไม่ overflow ไม่เพี้ยน (Playwright)
+- [x] `pytest -q` ผ่าน (รวม regression ครอบ bug)
+- [x] `dist/monitor-server.exe` + `dist/monitor-agent.exe` รันได้, agent → server push ได้, UPX บีบแล้ว
+

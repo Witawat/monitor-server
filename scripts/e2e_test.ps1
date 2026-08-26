@@ -21,7 +21,11 @@ try {
     Stop-Process -Id $ag.Id -Force -ErrorAction SilentlyContinue
 
     Write-Host "== e2e: check host registered =="
-    $resp = Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/status" -TimeoutSec 5
+    # /api/status ต้อง auth → login ก่อน (dev: admin/admin123)
+    $sess = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/v1/auth/login" -Method Post `
+        -Body '{"username":"admin","password":"admin123"}' -ContentType "application/json" -WebSession $sess | Out-Null
+    $resp = Invoke-RestMethod -Uri "http://127.0.0.1:18080/api/status" -WebSession $sess -TimeoutSec 5
     if ($resp.host_count -ge 1) {
         Write-Host "PASS: agent → server, host ขึ้นแล้ว (host_count=$($resp.host_count))"
     } else {

@@ -80,6 +80,8 @@ class AlertEngine:
         events: list[dict[str, Any]] = []
         for rule in rules:
             duration = parse_duration(rule["duration"])
+            if duration <= 0:
+                continue  # duration ผิด/0 → ข้าม rule (กัน fire ทันที) (L5)
             for snap in snapshots:
                 if rule["host_id"] and rule["host_id"] != snap.host_id:
                     continue

@@ -14,6 +14,12 @@ from server.storage.db import Database
 _RULE_ID_OFFLINE = 0  # synthetic rule — ไม่มีใน alert_rules
 
 
+def _fired_key(host_id: str) -> str:
+    """key ใน state_kv สำหรับบอกว่า host นี้เคย fire offline ไปแล้ว."""
+
+    return f"offline_fired:{host_id}"
+
+
 class HostDownMonitor:
     """ตรวจ host ที่ offline เกิน timeout แล้วบันทึกประวัติ + แจ้งเตือน."""
 
@@ -26,7 +32,6 @@ class HostDownMonitor:
         self._config = config
         self._notifier = notifier or Notifier(config.alerting.notifiers)
         self._check_interval = check_interval
-        self._fired: set[str] = set()
         self._task: asyncio.Task[None] | None = None
 
     def start(self) -> None:
@@ -60,12 +65,16 @@ class HostDownMonitor:
         hosts = await self._db.list_hosts(timeout_sec=self._config.ingest.offline_timeout_sec)
         fired: list[dict[str, Any]] = []
         for h in hosts:
+            key = _fired_key(h["host_id"])
             if h["online"]:
-                self._fired.discard(h["host_id"])  # กลับมา online → reset
+                if await self._db.kv_get(key) is not None:
+                    await self._db.kv_delete(key)  # กลับมา online → reset
                 continue
-            if h["host_id"] in self._fired:
+            if not await self._db.host_has_data(h["host_id"]):
+                continue  # ยังไม่เคยส่งข้อมูล — ไม่ถือว่า "หาย"
+            if await self._db.kv_get(key) is not None:
                 continue  # ยิงไปแล้ว — ไม่ยิงซ้ำจนกว่าจะกลับมา
-            self._fired.add(h["host_id"])
+            await self._db.kv_set(key, str(now))
             history_id = await self._db.add_history(
                 _RULE_ID_OFFLINE, h["host_id"], "host_down", 0.0, 0.0, now
             )

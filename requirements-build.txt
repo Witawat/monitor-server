@@ -1,0 +1,3 @@
+# build exe — ลง dev dependency สำหรับ build (ไม่ใช่ runtime)
+pillow
+pyinstaller

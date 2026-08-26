@@ -19,7 +19,7 @@
             return;
           }
           body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th></tr></thead><tbody>' +
-            rules.map((r) => '<tr><td>' + r.name + '</td><td>' + (r.host_id || 'ทุก host') + '</td><td>' + r.metric + '</td><td>' + r.op + ' ' + r.threshold + '</td></tr>').join('') +
+            rules.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id || 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td></tr>').join('') +
             '</tbody></table>';
         } else {
           if (!history.length) {
@@ -30,8 +30,8 @@
             history.map((h) =>
               '<tr data-id="' + h.id + '" style="' + (h.ack ? 'opacity:.6' : '') + '">' +
               '<td>' + new Date(h.created_at * 1000).toLocaleString('th-TH') + '</td>' +
-              '<td>' + h.host_id + '</td><td>' + h.metric + '</td>' +
-              '<td>' + h.value + ' (เกิน ' + h.threshold + ')</td>' +
+              '<td>' + escapeHtml(h.host_id) + '</td><td>' + escapeHtml(h.metric) + '</td>' +
+              '<td>' + escapeHtml(h.value) + ' (เกิน ' + escapeHtml(h.threshold) + ')</td>' +
               '<td>' + (h.ack ? '<span class="badge online">ack ✓</span>' : '<button class="btn" data-ack="' + h.id + '">ack</button>') + '</td>' +
               '</tr>'
             ).join('') + '</tbody></table>';

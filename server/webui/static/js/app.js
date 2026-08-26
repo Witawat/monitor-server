@@ -138,7 +138,7 @@
       const tags = await api('/api/v1/hosts/tags');
       const wrap = document.getElementById('tagFilters');
       wrap.innerHTML = tags.map((t) =>
-        '<button class="pill" data-tag="' + t + '">#' + t + '</button>').join('');
+        '<button class="pill' + (t === currentTag ? ' active' : '') + '" data-tag="' + escapeHtml(t) + '">#' + escapeHtml(t) + '</button>').join('');
       wrap.querySelectorAll('.pill').forEach((p) => {
         p.onclick = () => setTag(p.dataset.tag);
       });

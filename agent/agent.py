@@ -11,17 +11,24 @@ from typing import Any
 
 from agent import collect
 from agent.config import AgentConfig, load_config
-from agent.push import Backoff, PushQueue, push_batch
-from shared.metric import snapshot_to_dict
+from agent.push import Backoff, PushQueue, push_batch_status
+from shared.metric import MAX_BATCH_SIZE, snapshot_to_dict
 
 # ── helpers ──
 
 def _flush_queue(queue: PushQueue, url: str, token: str) -> None:
-    """ลองส่งข้อมูลค้างใน queue ทั้งหมด; สำเร็จแล้วล้าง."""
+    """ลองส่งข้อมูลค้างใน queue เป็น chunk (ไม่เกิน MAX_BATCH_SIZE ต่อครั้ง)."""
 
-    if queue.count() == 0:
+    pending = queue.pending()
+    if not pending:
         return
-    if push_batch(url, token, queue.pending()):
+    ok = True
+    for i in range(0, len(pending), MAX_BATCH_SIZE):
+        chunk = pending[i : i + MAX_BATCH_SIZE]
+        if not (200 <= push_batch_status(url, token, chunk) < 300):
+            ok = False
+            break
+    if ok:
         queue.clear()
 
 
@@ -40,7 +47,11 @@ def run(config: AgentConfig, state_dir: str | Path = "") -> None:
 
     while True:
         batch: list[dict[str, Any]] = [snapshot_to_dict(collect.snapshot(host_id, watch=config.watch))]
-        if push_batch(config.server_url, config.token, batch):
+        status = push_batch_status(config.server_url, config.token, batch)
+        if status in (401, 403):
+            # token/config ผิด — ไม่มีทางหาย อย่า retry ตลอดไป
+            raise SystemExit(f"server ตอบ {status} — token ไม่ถูกต้อง ตรวจ config แล้วลองใหม่")
+        if 200 <= status < 300:
             fail_streak = 0
             _flush_queue(queue, config.server_url, config.token)
             delay: float = config.interval

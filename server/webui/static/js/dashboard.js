@@ -28,15 +28,15 @@
       const badge = online
         ? '<span class="badge online">● ออนไลน์</span>'
         : '<span class="badge offline">○ ออฟไลน์</span>';
-      const tags = (h.tags || []).map((t) => '<span class="badge online" style="background:var(--accent-soft);color:var(--accent)">#' + t + '</span>').join('');
+      const tags = (h.tags || []).map((t) => '<span class="badge online" style="background:var(--accent-soft);color:var(--accent)">#' + escapeHtml(t) + '</span>').join('');
       const net = online
         ? '<div class="netline"><span>↑ ' + formatRate(s.net_rx || 0) + '</span><span>↓ ' + formatRate(s.net_tx || 0) + '</span></div>'
         : '<div class="netline"><span>—</span><span>—</span></div>';
       const row = (label, pct) =>
         '<div class="metric-row"><div class="label"><span>' + label + '</span><span>' + formatPercent(pct) + '</span></div>' +
         '<div class="progress"><span style="width:' + (pct || 0) + '%;background:' + fillColor(pct || 0) + '"></span></div></div>';
-      return '<div class="card' + (online ? '' : ' offline') + '" data-host="' + h.host_id + '">' +
-        '<h3>' + h.hostname + ' ' + badge + '</h3>' + tags +
+      return '<div class="card' + (online ? '' : ' offline') + '" data-host="' + escapeHtml(h.host_id) + '">' +
+        '<h3>' + escapeHtml(h.hostname) + ' ' + badge + '</h3>' + tags +
         row('CPU', s.cpu_percent) + row('RAM', s.mem_percent) + row('Disk', s.disk_percent) +
         net +
         '<div class="netline"><span>uptime ' + formatUptime(online ? s.uptime : null) + '</span></div>' +
@@ -54,8 +54,7 @@
       ['RAM', formatPercent(s.mem_percent), formatBytes(s.mem_total)],
       ['Disk', formatPercent(s.disk_percent), formatBytes(s.disk_total || s.mem_total)],
       ['Uptime', formatUptime(s.uptime), ''],
-    ];
-    document.getElementById('kpiRow').innerHTML = cells.map((c) =>
+    ];    document.getElementById('kpiRow').innerHTML = cells.map((c) =>
       '<div class="kpi"><div class="num">' + c[1] + '</div><div class="lbl">' + c[0] + (c[2] ? ' · ' + c[2] : '') + '</div></div>'
     ).join('');
   }
@@ -64,16 +63,22 @@
     const el = document.getElementById('servicesRow');
     if (!services || !services.length) { el.innerHTML = ''; return; }
     el.innerHTML = services.map((s) =>
-      '<span class="badge ' + (s.up ? 'online' : 'offline') + '">' + (s.up ? '●' : '○') + ' ' + s.name + (s.up ? ' ทำงาน' : ' หยุด') + '</span>'
+      '<span class="badge ' + (s.up ? 'online' : 'offline') + '">' + (s.up ? '●' : '○') + ' ' + escapeHtml(s.name) + (s.up ? ' ทำงาน' : ' หยุด') + '</span>'
     ).join('');
   }
 
+  function formatAxisTime(ms) {
+    if (currentRange === '1h' || currentRange === '6h') {
+      return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+    return new Date(ms).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  }
+
   function renderChart(series) {
+    if (chart) { chart.destroy(); chart = null; }  // กัน instance leak (M8)
     const wrap = document.querySelector('.chart-wrap');
-    const canvas = document.getElementById('metricChart');
     const any = Object.values(series).some((s) => s.points && s.points.length);
     if (!any) {
-      if (chart) { chart.destroy(); chart = null; }
       wrap.innerHTML = '<div class="empty-note">' + I18N.noData + '</div>';
       return;
     }
@@ -98,13 +103,20 @@
         animation: false,
         interaction: { mode: 'nearest', intersect: false },
         scales: {
-          x: { type: 'linear', ticks: { maxTicksLimit: 8 } },
+          x: {
+            type: 'linear',
+            ticks: {
+              maxTicksLimit: 8,
+              callback: (v) => formatAxisTime(v),
+            },
+          },
           y: { beginAtZero: true },
         },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
+              title: (items) => formatAxisTime(items[0].parsed.x),
               label: (c) => {
                 const ds = datasets[c.datasetIndex];
                 const unit = ds.unit === '%' ? '%' : (ds.unit === 'bytes' ? 'bytes' : '');

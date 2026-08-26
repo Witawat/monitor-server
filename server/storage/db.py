@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS hosts (
     last_seen  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_hosts_token ON hosts(token);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_hosts_token_unique ON hosts(token) WHERE token <> '';
 
 CREATE TABLE IF NOT EXISTS metrics (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,6 +130,11 @@ CREATE TABLE IF NOT EXISTS alert_history (
     acked_at   INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_alert_history_host ON alert_history(host_id, created_at);
+
+CREATE TABLE IF NOT EXISTS state_kv (
+    k TEXT PRIMARY KEY,
+    v TEXT
+);
 """
 
 
@@ -186,6 +192,51 @@ class Database:
         )
         row = await cur.fetchone()
         return dict(row) if row else None
+
+    async def host_exists(self, host_id: str) -> bool:
+        """เช็คว่า host_id มีอยู่ในตาราง hosts แล้วหรือยัง."""
+
+        cur = await self._require().execute(
+            "SELECT 1 FROM hosts WHERE host_id = ?", (host_id,)
+        )
+        return await cur.fetchone() is not None
+
+    async def host_has_data(self, host_id: str) -> bool:
+        """เช็คว่า host เคยส่ง snapshot (metrics) เข้ามาแล้วหรือยัง."""
+
+        cur = await self._require().execute(
+            "SELECT 1 FROM metrics WHERE host_id = ? LIMIT 1", (host_id,)
+        )
+        return await cur.fetchone() is not None
+
+    # ── generic key-value state ──
+
+    async def kv_get(self, key: str) -> str | None:
+        """อ่านค่า state (None ถ้ายังไม่เคยตั้ง)."""
+
+        cur = await self._require().execute(
+            "SELECT v FROM state_kv WHERE k = ?", (key,)
+        )
+        row = await cur.fetchone()
+        return str(row["v"]) if row else None
+
+    async def kv_set(self, key: str, value: str) -> None:
+        """เขียนค่า state (upsert)."""
+
+        await self._require().execute(
+            """
+            INSERT INTO state_kv (k, v) VALUES (?, ?)
+            ON CONFLICT(k) DO UPDATE SET v = excluded.v
+            """,
+            (key, value),
+        )
+        await self._require().commit()
+
+    async def kv_delete(self, key: str) -> None:
+        """ลบค่า state."""
+
+        await self._require().execute("DELETE FROM state_kv WHERE k = ?", (key,))
+        await self._require().commit()
 
     async def upsert_host(
         self, host_id: str, hostname: str, platform: str, token: str, now: int | None = None
@@ -397,7 +448,45 @@ class Database:
             return {"cpu_percent": 0.0, "mem_percent": 0.0, "uptime": 0}
         d = dict(row)
         d["disk_percent"] = await self._latest_disk_percent(host_id)
+        d["disk_total"] = await self._latest_disk_total(host_id)
+        d["net_rx"], d["net_tx"] = await self._latest_net_rate(host_id)
         return d
+
+    async def _latest_disk_total(self, host_id: str) -> int:
+        """คืน total bytes ของ mount แรกใน snapshot ล่าสุด (default 0)."""
+
+        cur = await self._require().execute(
+            """
+            SELECT total FROM disk_samples WHERE host_id = ?
+            ORDER BY ts DESC, id ASC LIMIT 1
+            """,
+            (host_id,),
+        )
+        row = await cur.fetchone()
+        return int(row["total"]) if row else 0
+
+    async def _latest_net_rate(self, host_id: str) -> tuple[float, float]:
+        """คำนวณ net rate (rx/tx bytes/s) จาก 2 จุดล่าสุด (default 0)."""
+
+        rows = list(
+            await self._require().execute_fetchall(
+                """
+                SELECT ts, SUM(rx_bytes) AS rx, SUM(tx_bytes) AS tx
+                FROM net_samples WHERE host_id = ?
+                GROUP BY ts ORDER BY ts DESC LIMIT 2
+                """,
+                (host_id,),
+            )
+        )
+        if len(rows) < 2:
+            return 0.0, 0.0
+        newest, prev = rows[0], rows[1]
+        dt = int(newest["ts"]) - int(prev["ts"])
+        if dt <= 0:
+            return 0.0, 0.0
+        rx_rate = max(0, (int(newest["rx"]) - int(prev["rx"]))) / dt
+        tx_rate = max(0, (int(newest["tx"]) - int(prev["tx"]))) / dt
+        return rx_rate, tx_rate
 
     async def _latest_disk_percent(self, host_id: str) -> float:
         """คืน disk percent ของ mount แรกใน snapshot ล่าสุด (default 0)."""
@@ -492,6 +581,8 @@ class Database:
         await conn.execute("DELETE FROM metrics WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM disk_samples WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM net_samples WHERE host_id = ?", (host_id,))
+        await conn.execute("DELETE FROM service_samples WHERE host_id = ?", (host_id,))
+        await conn.execute("DELETE FROM alert_history WHERE host_id = ?", (host_id,))
         await conn.execute("DELETE FROM hosts WHERE host_id = ?", (host_id,))
         await conn.commit()
         return True
@@ -604,7 +695,12 @@ class Database:
         params = []
         for f in fields:
             if f in data:
-                params.append(data[f])
+                value = data[f]
+                if f == "enabled":
+                    value = 1 if value else 0
+                elif f == "threshold":
+                    value = float(value)
+                params.append(value)
         if "notify" in data:
             params.append(json.dumps(data["notify"]))
         params.append(rule_id)
@@ -697,5 +793,6 @@ class Database:
         cur = await conn.execute("DELETE FROM metrics WHERE ts < ?", (cutoff,))
         await conn.execute("DELETE FROM disk_samples WHERE ts < ?", (cutoff,))
         await conn.execute("DELETE FROM net_samples WHERE ts < ?", (cutoff,))
+        await conn.execute("DELETE FROM service_samples WHERE ts < ?", (cutoff,))
         await conn.commit()
         return cur.rowcount

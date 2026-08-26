@@ -23,6 +23,12 @@ data/
 state.json
 run-*.log
 
+# Build artifacts (PyInstaller)
+build/
+dist/
+*.spec
+scripts/tools/upx/
+
 # Secrets / config
 config.toml
 .env
