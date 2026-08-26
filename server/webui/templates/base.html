@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitor</title>
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app-root">
+  <header class="topbar">
+    <div class="brand">● Monitor</div>
+    <div class="search"><input id="searchInput" type="search" placeholder="ค้นหา host…" aria-label="ค้นหา host"></div>
+    <div class="user">
+      <span id="currentUser"></span>
+      <button id="logoutBtn">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" aria-label="เมนูหลัก">
+      <a href="#/fleet" data-nav="fleet">Fleet</a>
+      <a href="#/alerts" data-nav="alerts">Alerts</a>
+      <a href="#/settings" data-nav="settings">ตั้งค่า</a>
+    </nav>
+    <main class="content" id="content">
+      {% include "parts/fleet.html" %}
+      {% include "parts/host.html" %}
+      {% include "parts/alerts.html" %}
+      {% include "parts/settings.html" %}
+    </main>
+  </div>
+
+  <footer class="statusbar" id="statusbar">Monitor v0.1.0</footer>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <p id="modalText"></p>
+    <div class="actions">
+      <button class="btn" id="modalCancel">ยกเลิก</button>
+      <button class="btn danger" id="modalConfirm">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="/static/js/chart.umd.min.js"></script>
+<script src="/static/js/format.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script src="/static/js/scale.js"></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/alerts.js"></script>
+</body>
+</html>

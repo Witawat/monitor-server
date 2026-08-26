@@ -1,0 +1,12 @@
+[Unit]
+Description=Monitor Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m agent.agent --server http://SERVER:18080 --token TOKEN --interval 15
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

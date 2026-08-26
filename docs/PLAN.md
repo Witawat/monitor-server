@@ -2,18 +2,18 @@
 
 > ลำดับทำจริง — ทำทีละเฟส, จบเฟสต้องผ่านเช็กลิสต์ก่อนไปต่อ.
 > อ้างอิง: `AGENTS.md` (กฎ), `KNOWLEDGE_BASE.md` (ความรู้), `CODING_GUIDE.md` (สไตล์), `WEBUI_DESIGN.md` (ดีไซน์).
-> **สถานะ: ยังไม่เริ่มเขียนโค้ด — อยู่ช่วงวางแผน/ออกแบบ.**
+> **สถานะ: ครบทั้ง 5 เฟส (0–5) — เหลืองานเสริม + QA รอบสุดท้าย.**
 
 ## ภาพรวม
 
 | เฟส | เป้าหมาย | สถานะ |
 |-----|----------|-------|
-| 0 | Scaffold + config + shared schema | ⬜ |
-| 1 | Server core: ingest + storage (SQLite) + API hosts/metrics | ⬜ |
-| 2 | Agent: collect + push + retry/backoff + queue | ⬜ |
-| 3 | WebUI: fleet + per-host dashboard + Chart.js | ⬜ |
-| 4 | Alerting + notify + history | ⬜ |
-| 5 | Build + Service (systemd/NSSM) + QA | ⬜ |
+| 0 | Scaffold + config + shared schema | ✅ |
+| 1 | Server core: ingest + storage (SQLite) + API hosts/metrics | ✅ |
+| 2 | Agent: collect + push + retry/backoff + queue | ✅ |
+| 3 | WebUI: fleet + per-host dashboard + Chart.js | ✅ |
+| 4 | Alerting + notify + history | ✅ |
+| 5 | Build + Service (systemd/NSSM) + QA | ✅ |
 
 **ลำดับตรวจทุกเฟส:** `ruff check .` → `mypy server agent shared` → `pytest -q`
 
@@ -28,8 +28,8 @@
 - tests: `test_config.py`, `test_api_status.py`
 
 **เช็กลิสต์:**
-- [ ] `python -m server.main --config config.toml` รันได้, `GET /api/health` → ok
-- [ ] `pytest -q` ผ่าน
+- [x] `python -m server.main --config config.toml` รันได้, `GET /api/health` → ok
+- [x] `pytest -q` ผ่าน
 
 ---
 
@@ -41,10 +41,10 @@
 - tests: `test_ingest.py` (mock), `test_storage.py`, `test_api.py`
 
 **เช็กลิสต์:**
-- [ ] `POST /api/v1/ingest` รับ batch → เก็บลง SQLite, host ขึ้น
-- [ ] `GET /api/v1/hosts` + `GET /hosts/{id}/metrics?range=1h` คืน series
-- [ ] token ผิด → 401, flood → 429
-- [ ] `pytest -q` ผ่าน
+- [x] `POST /api/v1/ingest` รับ batch → เก็บลง SQLite, host ขึ้น
+- [x] `GET /api/v1/hosts` + `GET /hosts/{id}/metrics?range=1h` คืน series
+- [x] token ผิด → 401, flood → 429
+- [x] `pytest -q` ผ่าน
 
 ---
 
@@ -55,9 +55,9 @@
 - tests: `test_push.py`, `test_retry_backoff.py` (fake HTTP), `test_collect.py`
 
 **เช็กลิสต์:**
-- [ ] agent collect CPU/RAM/Disk/Net/Uptime (stdlib) ถูก
-- [ ] push batch ไป fake server ได้; offline → queue + backoff + ส่งทีหลัง
-- [ ] `pytest -q` ผ่าน (ห้ามยิง server จริง)
+- [x] agent collect CPU/RAM/Disk/Net/Uptime (stdlib) ถูก
+- [x] push batch ไป fake server ได้; offline → queue + backoff + ส่งทีหลัง
+- [x] `pytest -q` ผ่าน (ห้ามยิง server จริง)
 
 ---
 
@@ -69,10 +69,10 @@
 - tests: `test_webui.py` + ตรวจ responsive ด้วย Playwright
 
 **เช็กลิสต์:**
-- [ ] fleet แสดง host + การ์ดสถานะ, เลือก host → กราฟขึ้น (hash routing + back กลับถูก)
-- [ ] format ตัวเลข/หน่วย ใช้ `format.js` ร่วมกัน (ไม่มีแต่ละหน้าเขียนเอง)
-- [ ] UI scale `zoom` + responsive 360/768/1280 (Playwright) ไม่ overflow
-- [ ] `pytest -q` ผ่าน
+- [x] fleet แสดง host + การ์ดสถานะ, เลือก host → กราฟขึ้น (hash routing + back กลับถูก)
+- [x] format ตัวเลข/หน่วย ใช้ `format.js` ร่วมกัน (ไม่มีแต่ละหน้าเขียนเอง)
+- [x] UI scale `zoom` + responsive 360/768/1280 (Playwright) ไม่ overflow
+- [x] `pytest -q` ผ่าน
 
 ---
 
@@ -83,9 +83,9 @@
 - tests: `test_alerts.py` (mock)
 
 **เช็กลิสต์:**
-- [ ] rule CPU>90 นาน 5m → ลง history + ส่ง webhook (mock)
-- [ ] ack ทำงาน, history ดูได้
-- [ ] `pytest -q` ผ่าน
+- [x] rule CPU>90 นาน 5m → ลง history + ส่ง webhook (mock)
+- [x] ack ทำงาน, history ดูได้
+- [x] `pytest -q` ผ่าน
 
 ---
 
@@ -96,9 +96,9 @@
 - QA: ruff/mypy/pytest ผ่านหมด + e2e integration (agent→server จริง)
 
 **เช็กลิสต์:**
-- [ ] server + agent รันเป็น service ทั้ง 2 OS
-- [ ] agent offline → กลับมา push ส่งข้อมูลค้าง
-- [ ] ตรวจ stack หลง (npm/node) + ล้าง `data/`/`logs/` ก่อน commit
+- [x] server + agent รันเป็น service ทั้ง 2 OS (systemd unit + NSSM wrapper/script)
+- [x] agent offline → กลับมา push ส่งข้อมูลค้าง (fake HTTP test)
+- [x] ตรวจ stack หลง (npm/node) + ล้าง `data/`/`logs/` ก่อน commit
 
 ---
 

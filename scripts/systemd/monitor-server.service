@@ -1,0 +1,13 @@
+[Unit]
+Description=Monitor Server
+After=network.target
+
+[Service]
+Type=simple
+User=monitor
+WorkingDirectory=/opt/monitor-server
+ExecStart=/usr/bin/python3 -m server.main --config /etc/monitor-server/config.toml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

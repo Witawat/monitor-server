@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เข้าสู่ระบบ — Monitor</title>
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card" id="loginForm">
+    <h1>● Monitor</h1>
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn primary" type="submit" id="loginBtn" style="width:100%">เข้าสู่ระบบ</button>
+    <p class="login-error" id="loginError"></p>
+  </form>
+</div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  btn.disabled = true;
+  err.textContent = '';
+  try {
+    const res = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+      }),
+    });
+    if (res.ok) { location.href = '/#/fleet'; }
+    else { err.textContent = 'username หรือ password ไม่ถูกต้อง'; }
+  } catch (ex) {
+    err.textContent = 'เชื่อมต่อ server ไม่ได้';
+  } finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>
