@@ -30,12 +30,15 @@
 
 ## Build EXE อัตโนมัติ (server + agent + icon + UPX)
 
-มีสคริปต์เดียวรันครบ: `scripts/build.ps1`
+มีสคริปต์เดียวรันครบ — เลือกได้ 2 แบบ (ผลเหมือนกัน):
 ```powershell
 # ลง dev dep ก่อน (ครั้งแรก)
 .venv\Scripts\python.exe -m pip install -r requirements-build.txt
 
-# build (ดาวน์โหลด UPX ล่าสุดอัตโนมัติถ้ายังไม่มี + สร้าง icon + PyInstaller + UPX)
+# แบบ 1: build.bat (cmd ตรง — ไม่ต้อง powershell) ← ตัวหลัก
+scripts\build.bat
+
+# แบบ 2: build.ps1 (PowerShell)
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 ผลลัพธ์ (ใน `dist/`):

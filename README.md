@@ -18,16 +18,16 @@
 - **Server**: FastAPI รับ push → เขียน SQLite (time-series) → แสดง dashboard + กราฟย้อนหลัง + alerting
 - **ข้ามแพลตฟอร์ม**: agent/server รันได้ทั้ง Linux และ Windows; deploy เป็น service (systemd / NSSM)
 
-## ฟีเจอร์หลัก (วางแผน)
+## ฟีเจอร์หลัก (ใช้งานได้แล้ว)
 
 | หมวด | รายละเอียด |
 |------|------------|
-| Fleet dashboard | รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์ |
-| Per-host dashboard | เลือก host → กราฟย้อนหลัง per metric (1m/5m/1h/1d) + ข้อมูลเรียลไทม์ |
+| Fleet dashboard | รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์ + กรอง/search/tag |
+| Per-host dashboard | เลือก host → กราฟย้อนหลัง per metric (rollup 1m/5m/1h/1d) + KPI + service watch |
 | Agent | push model, batch + retry + backoff + queue offline, stdlib-only |
-| Alerting | เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram) |
-| Auth/Security | API token ต่อ host (`X-Agent-Token`), rate limit ingest, login admin WebUI |
-| เสริม (แนะนำ) | grouping/tag host, uptime/offline detection, process/service watch, export CSV |
+| Alerting | เงื่อนไข threshold ต่อ host/metric + history + ack + notify (webhook/Telegram) + host-down |
+| Auth/Security | API token ต่อ host (`X-Agent-Token`), rate limit ingest + login, CSP/security headers |
+| เสริม | grouping/tag host, uptime/offline detection, process/service watch, export CSV, alert rule CRUD UI |
 
 ## โครงสร้าง
 
@@ -59,6 +59,21 @@ python -m server.main --config config.toml       # เปิด http://127.0.0.1
 # agent (dev — ชี้ไป server ตัวเอง, token จาก WebUI)
 python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
 ```
+
+## Build EXE (server + agent)
+
+```powershell
+# ลง dev dep ครั้งแรก
+.venv\Scripts\pip install -r requirements-build.txt
+
+# build (สร้าง icon monitor+pulse + PyInstaller + บีบด้วย UPX ล่าสุด)
+scripts\build.bat                 # ตัวหลัก — cmd ตรง
+# หรือ: powershell -ExecutionPolicy Bypass -File scripts\build.ps1
+```
+
+- ผลลัพธ์ใน `dist/`: `monitor-server.exe` + `monitor-agent.exe` (onefile, มี icon, UPX แล้ว)
+- icon: `scripts/make_icon.py` → `build/monitor.ico` (16–256) · UPX: `scripts/tools/upx/upx.exe` (ดาวน์โหลดอัตโนมัติครั้งแรก)
+- ดูรายละเอียดเต็ม: `docs/BUILD.md`
 
 ## ตรวจก่อนส่งงาน
 

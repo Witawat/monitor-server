@@ -52,15 +52,30 @@ python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval
 
 # ตรวจก่อนส่งงาน (ต้องผ่านหมดก่อน PR)
 ruff check .; mypy server agent shared; pytest -q
+
+# build EXE (server + agent onefile + icon monitor + UPX ล่าสุด)
+scripts\build.bat        # ตัวหลัก — รันตรงได้เลย (สร้าง icon + PyInstaller + UPX)
+# หรือ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
+# ลง dev dep ก่อนครั้งแรก: .venv\Scripts\pip install -r requirements-build.txt
+# ผลลัพธ์ใน dist/: monitor-server.exe + monitor-agent.exe
 ```
 
 ## ฟีเจอร์หลัก (เช็กลิสต์)
-- [ ] Fleet dashboard: รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์
-- [ ] กราฟย้อนหลัง per metric (time-series SQLite + rollup เก็บ 1m/5m/1h/1d)
-- [ ] Agent push: batch + retry + backoff + queue เมื่อ offline (เก็บในเครื่องแล้วส่งทีหลัง)
-- [ ] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram/email)
-- [ ] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token
-- [ ] Auth/security: API token ต่อ host (X-Agent-Token), rate limit ingest
+- [x] Fleet dashboard: รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์
+- [x] กราฟย้อนหลัง per metric (time-series SQLite + rollup เก็บ 1m/5m/1h/1d)
+- [x] Agent push: batch + retry + backoff + queue เมื่อ offline (เก็บในเครื่องแล้วส่งทีหลัง)
+- [x] Alerting: เงื่อนไข threshold ต่อ host/metric + history + notify (webhook/Telegram/email) + host-down
+- [x] WebUI: login admin, per-host dashboard, fleet overview, ตั้งค่า alert/agent token
+- [x] Auth/security: API token ต่อ host (X-Agent-Token), rate limit ingest + login, CSP headers
+
+## Build EXE (บันทึก)
+- **`scripts/build.bat`** — ตัวหลัก build ทั้ง 2 exe (PyInstaller onefile) + สร้าง icon + บีบด้วย UPX ล่าสุด ผ่าน cmd ตรง (ไม่ต้อง powershell) — ดาวน์โหลด UPX อัตโนมัติครั้งแรก
+- **`scripts/build.ps1`** — ทางเลือก PowerShell (ทำงานเหมือนกัน)
+- **icon**: `scripts/make_icon.py` (Pillow) วาดหน้าจอ monitor + เส้น pulse → `build/monitor.ico` (16–256) ใช้กับทั้ง 2 exe
+- **UPX**: ดาวน์โหลดล่าสุด → `scripts/tools/upx/upx.exe` (build tool — gitignore)
+- **server** ต้อง `--add-data server\webui;server/webui` (ให้ WebUI/templates/static ทำงานใน exe); **agent** รวม `shared/` อัตโนมัติ
+- dep build: `requirements-build.txt` (pillow, pyinstaller) — รายละเอียดเต็มดู `docs/BUILD.md`
+- ผลลัพธ์: `dist/monitor-server.exe` (~22.8MB) + `dist/monitor-agent.exe` (~7.1MB)
 
 ## กฎการทดสอบ (สำคัญ)
 - เทส server: `pytest -q` — ingest ต้องเทสด้วย mock (ไม่พึ่ง server จริง)
