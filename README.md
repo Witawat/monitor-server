@@ -1,3 +1,9 @@
+[![CI](https://github.com/Witawat/monitor-server/actions/workflows/ci.yml/badge.svg)](https://github.com/Witawat/monitor-server/actions/workflows/ci.yml)
+[![Release](https://github.com/Witawat/monitor-server/actions/workflows/release.yml/badge.svg)](https://github.com/Witawat/monitor-server/actions/workflows/release.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 # monitor-server — ข้ามแพลตฟอร์ม Server Monitoring + WebUI
 
 ระบบ monitor server ข้ามแพลตฟอร์ม (Linux + Windows) ที่มี **central server** รวบรวม metrics จากหลายเครื่อง แล้วแสดงผ่าน **Web UI แบบ dashboard** (แรงบันดาลใจจาก DigitalOcean / Plesk) โดยมี **agent ขนาดเล็ก** ติดตั้งบนแต่ละเครื่องที่ถูก monitor คอยเก็บ metrics แล้ว **push** มาที่ server แบบรวดเร็ว
@@ -113,6 +119,12 @@ scripts\test_exe.bat        # หรือ: powershell -ExecutionPolicy Bypass -
 ```powershell
 ruff check .; mypy server agent shared; pytest -q
 ```
+
+## CI / Release อัตโนมัติ
+
+- **`.github/workflows/ci.yml`** — ครัน `ruff` + `mypy` + `pytest` บน Python 3.11/3.12 ทุก push/PR → master
+- **`.github/workflows/release.yml`** — เมื่อ push tag `v*` → build `monitor-server.exe` + `monitor-agent.exe` (Windows runner) แล้ว publish GitHub release + attach 2 exe
+- release อัตโนมัติ: `git tag v0.3.0 && git push origin v0.3.0`
 
 ## เอกสาร
 
