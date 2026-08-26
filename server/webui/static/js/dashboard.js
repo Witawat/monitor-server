@@ -64,7 +64,10 @@
         '</div>';
     }).join('');
     grid.querySelectorAll('.card').forEach((card) => {
-      card.onclick = () => { location.hash = '#/host/' + card.dataset.host; };
+      card.onclick = () => {
+        window.Monitor.setHostId(card.dataset.host);   // เลือก host + scroll to host section
+        scrollToSection('host');
+      };
     });
   }
 
@@ -160,11 +163,28 @@
     });
   }
 
+  // เติมตัวเลือก host ใน host dashboard (จาก fleet data ที่ app.js มี)
+  function fillHostSelect(hosts) {
+    const sel = document.getElementById('hostSelect');
+    if (!sel) return;
+    const prev = sel.value;  // จำ host ที่เลือกอยู่
+    sel.innerHTML = hosts.map((h) =>
+      '<option value="' + escapeHtml(h.host_id) + '">' + escapeHtml(h.hostname || h.host_id) + '</option>'
+    ).join('');
+    if (prev && hosts.some((h) => h.host_id === prev)) sel.value = prev;
+    sel.onchange = () => window.Monitor.setHostId(sel.value);
+  }
+
   async function renderHostView(id) {
+    // ถ้าไม่ได้ระบุ id → ใช้ค่า dropdown ปัจจุบัน หรือ host แรกจาก fleet
+    const sel = document.getElementById('hostSelect');
+    if (!id && sel && sel.value) id = sel.value;
+    if (!id) return;
     try {
       const host = await api('/api/v1/hosts/' + id);
       const metrics = await api('/api/v1/hosts/' + id + '/metrics?range=' + currentRange + '&metrics=' + currentMetric);
-      document.getElementById('hostTitle').textContent = host.hostname || host.host_id;
+      document.getElementById('hostSelect').value = id;
+      document.getElementById('hostIdLabel').textContent = host.hostname || host.host_id;
       const badge = document.getElementById('hostBadge');
       badge.className = 'badge ' + (host.online ? 'online' : 'offline');
       badge.textContent = host.online ? '● ออนไลน์' : '○ ออฟไลน์';
@@ -212,9 +232,9 @@
   });
 
   function currentRouteId() {
-    const parts = location.hash.replace(/^#/, '').split('/').filter(Boolean);
-    return parts[0] === 'host' && parts[1] ? parts[1] : null;
+    const sel = document.getElementById('hostSelect');
+    return sel && sel.value ? sel.value : null;
   }
 
-  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart };
+  window.Dashboard = { renderFleetCards, renderHostView, renderKpi, renderChart, fillHostSelect };
 })();

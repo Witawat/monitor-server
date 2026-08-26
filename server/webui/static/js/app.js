@@ -60,37 +60,61 @@
     });
   }
 
-  // ── routing ──
-  const routes = {
-    fleet: () => { renderFleetView(); },
-    alerts: () => { AlertsView.loadAlerts(); },
-    settings: () => { AlertsView.loadSettings(); },
-    host: (id) => { Dashboard.renderHostView(id); },
-  };
+  // ── routing (หน้าเดียวเลื่อนยาว: nav ลิงก์ anchor scroll + host dropdown) ──
+  const sections = ['fleet', 'alerts', 'settings', 'host'];
 
-  function currentRoute() {
-    const h = location.hash.replace(/^#/, '') || '/fleet';
-    const parts = h.split('/').filter(Boolean);
-    if (parts[0] === 'host' && parts[1]) return { name: 'host', id: parts[1] };
-    return { name: parts[0] || 'fleet' };
+  async function initAll() {
+    // โหลดข้อมูลทุก section หนึ่งครั้ง (long page — ไม่สลับ view)
+    renderFleetView();
+    await AlertsView.loadAlerts();
+    await AlertsView.loadSettings();
+    // เลือก host: จาก hash #/host/<id> หรือตัวแรก
+    const parts = location.hash.replace(/^#/, '').split('/').filter(Boolean);
+    const hashHost = parts[0] === 'host' && parts[1] ? parts[1] : '';
+    const sel = document.getElementById('hostSelect');
+    const firstId = fleetData.length ? fleetData[0].host_id : '';
+    const target = hashHost || firstId;
+    if (target) await Dashboard.renderHostView(target);
+    else renderHostEmpty();
   }
 
-  function showView(name) {
-    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
-    const target = document.getElementById('view-' + (name === 'host' ? 'host' : name));
-    if (target) target.classList.add('active');
-    document.querySelectorAll('.sidebar a').forEach((a) => {
-      a.classList.toggle('active', a.dataset.nav === (name === 'host' ? 'fleet' : name));
+  function renderHostEmpty() {
+    const wrap = document.querySelector('.chart-wrap');
+    if (wrap) wrap.innerHTML = '<div class="empty-note">' + I18N.noHostData + '</div>';
+  }
+
+  function scrollToSection(name) {
+    const el = document.getElementById('view-' + name);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  window.scrollToSection = scrollToSection;
+
+  // nav click → scroll (ไม่เปลี่ยน hash route แบบเดิม)
+  document.querySelectorAll('.sidebar a[data-nav]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.sidebar a').forEach((x) => x.classList.remove('active'));
+      a.classList.add('active');
+      scrollToSection(a.dataset.nav);
     });
+  });
+
+  // host id ที่เลือกปัจจุบัน (เปลี่ยนผ่าน hostSelect)
+  let currentHostId = '';
+  async function setHostId(id) {
+    currentHostId = id;
+    location.hash = '#/host/' + id;  // เก็บไว้ให้ back/reload กลับตัวเดิม
+    await Dashboard.renderHostView(id);
+    scrollToSection('host');
   }
 
-  async function route() {
-    const r = currentRoute();
-    showView(r.name);
-    if (routes[r.name]) await routes[r.name](r.id);
-  }
-
-  window.addEventListener('hashchange', route);
+  // support back/reload: ถ้า hash เป็น #/host/<id> → เลือก host นั้น (แล้ว scroll)
+  window.addEventListener('hashchange', async () => {
+    const parts = location.hash.replace(/^#/, '').split('/').filter(Boolean);
+    if (parts[0] === 'host' && parts[1]) {
+      await Dashboard.renderHostView(parts[1]);
+    }
+  });
 
   // ── fleet poll ──
   async function loadFleet(quiet) {
@@ -107,6 +131,7 @@
   function renderFleetView() {
     renderFleetFiltered();
     updateStatusbar(fleetData);
+    Dashboard.fillHostSelect(fleetData);  // อัปเดต dropdown host ใน dashboard
     if (fleetTimer) clearInterval(fleetTimer);
     fleetTimer = setInterval(() => loadFleet(true), 10000);
   }
@@ -195,11 +220,11 @@
     document.getElementById('filterAll').onclick = () => setOnlineFilter(null);
     document.getElementById('filterOnline').onclick = () => setOnlineFilter(true);
     document.getElementById('filterOffline').onclick = () => setOnlineFilter(false);
-    await route();
     await loadFleet();
     loadTags();
+    await initAll();
   });
 
   // expose สำหรับ dashboard.js / alerts.js
-  window.Monitor = { api, toast, confirmModal, loadFleet };
+  window.Monitor = { api, toast, confirmModal, loadFleet, setHostId };
 })();

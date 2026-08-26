@@ -66,9 +66,10 @@ body {
 .banner.error { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
 .banner.info { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
 
-/* ── view ── */
-.view { display: none; }
+/* ── view (หน้าเดียวเลื่อนยาว — ทุก section แสดงพร้อมกัน) ── */
+.view { display: block; scroll-margin-top: 16px; }
 .view.active { display: block; }
+.content { display: flex; flex-direction: column; gap: 32px; }
 
 /* ── toolbar / tabs ── */
 .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -162,6 +163,24 @@ th { color: var(--text-2); font-weight: 600; }
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .field input:disabled, .field select:disabled { opacity: 0.6; }
+
+/* ── ฟอร์ม alert rule: grid + checkbox notify (WEBUI_DESIGN.md §8.1) ── */
+.rule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.rule-grid .field { min-width: 0; }
+.rule-grid select, .rule-grid input { width: 100%; min-width: 0; }
+@media (max-width: 767px) { .rule-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 479px) { .rule-grid { grid-template-columns: 1fr; } }
+.check-group { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+.check-group .check {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.875rem; color: var(--text); cursor: pointer;
+}
+.check-group .check input { width: auto; margin: 0; accent-color: var(--accent); }
+.rule-actions { display: flex; gap: 8px; margin-top: 14px; }
 
 /* input กลาง toolbar (search / tags / token) ให้เป็นกล่องแบบเดียวกัน */
 .toolbar input[type="text"], .toolbar input[type="search"], .toolbar input:not([type]),

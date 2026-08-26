@@ -17,22 +17,25 @@
 
 ## 2. App Shell (โครงรวมทุกหน้า)
 
+> **หน้าเดียวเลื่อนยาว (long page)** — ทุก section แสดงพร้อมกันเลื่อนแนวตั้ง ไม่ใช่สลับ view แต่ละ view. Sidebar เป็น anchor scroll ไปยัง section; การ์ด host คลิก → เลือก host + scroll ไป section Host; Host มี dropdown เลือก host (default = host แรก หรือจาก hash `#/host/<id>`).
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  ● Monitor        🔍 ค้นหา host…        [👤 admin ▼]     │  ← topbar (56px)
 ├──────────┬───────────────────────────────────────────────┤
-│  ◉ Fleet  │                                               │
-│  ⚠ Alerts │          (เนื้อหา view)                       │  ← main
-│  ⚙ ตั้งค่า │                                               │
-│          │                                               │
+│  ◉ Fleet  │  Fleet (การ์ด host)                          │  ← scroll ลงต่อเนื่อง
+│  ⚠ Alerts │  Host (dropdown + KPI + chart)               │
+│  ⚙ ตั้งค่า │  Alerts (กฎ + ประวัติ + ฟอร์ม)                │
+│          │   ตั้งค่า (Agent Token)                       │
 ├──────────┴───────────────────────────────────────────────┤
-│  v0.1.0 · 3 host ออนไลน์ · 2 ออฟไลน์                     │  ← status bar
+│  v0.2.0 · 3 host ออนไลน์ · 2 ออฟไลน์                     │  ← status bar
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **Sidebar** (ซ้าย, 200px): nav หลัก — Fleet / Alerts / Settings. หดเป็นแถบบน (topbar) เมื่อจอ < 768px
+- **Sidebar** (ซ้าย, 200px): nav หลัก — Fleet / Alerts / Settings. คลิก → scroll ไป section. หดเป็นแถบบน (topbar) เมื่อจอ < 768px
 - **Topbar**: logo/ชื่อระบบ + ค้นหา host (กรอง fleet) + เมนูผู้ใช้ (logout)
-- **Status bar** (ล่าง): version + สรุป quick count
+- **Status bar** (ล่าง): version + สรุป quick count (อ่าน `v{__version__}` จาก server ไม่ hardcode)
+- คลิก host card → `window.Monitor.setHostId(id)` → เลือก host + renderHostView + scroll ไป `#view-host`
 - พื้นที่ content: card grid, padding 16–24px
 
 ---
@@ -187,8 +190,8 @@ setScale();
 │ (กราฟ CPU + RAM + Disk/Net สลับแท็บ)             │
 └──────────────────────────────────────────────────┘
 ```
-- **KPI row**: เลขเด่นใหญ่ + sub-label (cores/GB/GB)
-- **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector ใต้ KPI — plot ทีละตัวเดียว กันสเกลเพี้ยน เช่น uptime วินาทีปน CPU %)
+- **Host** (section ในหน้านี้): dropdown เลือก host + KPI row + metric chips + chart (เลือก metric ทีละตัว กันสเกล) — เปลี่ยน host จาก dropdown หรือคลิกการ์ด Fleet
+- **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector — plot ทีละตัวเดียว)
 - alert ที่ active ของ host นี้: แถบเตือนสีแดง/เหลืองด้านบน
 - data: `GET /api/v1/hosts/{id}/metrics?range=...&metrics=<metric>` (ระบุ metric เดียว → แสดงเส้นเดียว + y-axis ตั้งชื่อตาม unit)
 

@@ -8,7 +8,7 @@
   </div>
   <div id="ruleForm" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
     <input type="hidden" id="ruleId">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+    <div class="rule-grid">
       <div class="field"><label for="ruleName">ชื่อ</label><input id="ruleName" placeholder="CPU สูง"></div>
       <div class="field"><label for="ruleHost">Host (ว่าง=ทุก)</label>
         <select id="ruleHost">
@@ -39,11 +39,13 @@
       <div class="field"><label for="ruleThreshold">Threshold</label><input id="ruleThreshold" type="number" step="any"></div>
       <div class="field"><label for="ruleDuration">Duration</label><input id="ruleDuration" value="5m" placeholder="5m"></div>
       <div class="field"><label>Notify</label>
-        <label><input type="checkbox" id="ruleNotifyWebhook" value="webhook"> webhook</label>
-        <label><input type="checkbox" id="ruleNotifyTelegram" value="telegram"> telegram</label>
+        <div class="check-group">
+          <label class="check"><input type="checkbox" id="ruleNotifyWebhook" value="webhook"> webhook</label>
+          <label class="check"><input type="checkbox" id="ruleNotifyTelegram" value="telegram"> telegram</label>
+        </div>
       </div>
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px">
+    <div class="rule-actions">
       <button class="btn primary" id="saveRuleBtn">บันทึก</button>
       <button class="btn" id="cancelRuleBtn">ยกเลิก</button>
     </div>

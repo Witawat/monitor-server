@@ -1,7 +1,7 @@
 <section class="view" id="view-host" data-view="host">
   <div class="toolbar">
-    <a class="btn" href="#/fleet">← Fleet</a>
-    <h2 id="hostTitle">Host</h2>
+    <h2>Host</h2>
+    <select id="hostSelect" aria-label="เลือก host"></select>
     <span class="badge online" id="hostBadge"></span>
     <span style="flex:1"></span>
     <input id="tagInput" placeholder="tags (คั่น ,)" aria-label="tags">
@@ -12,6 +12,7 @@
     <button class="pill" data-range="1d">1d</button>
     <button class="pill" data-range="7d">7d</button>
   </div>
+  <div id="hostIdLabel" style="display:none"></div>
   <div class="kpi-row" id="kpiRow"></div>
   <div id="servicesRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
   <div class="toolbar">
