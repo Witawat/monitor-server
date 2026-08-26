@@ -152,7 +152,26 @@ th { color: var(--text-2); font-weight: 600; }
 .login-card h1 { font-size: 1.25rem; margin: 0 0 16px; color: var(--accent); }
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 0.8125rem; color: var(--text-2); margin-bottom: 4px; }
-.field input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font-size: 0.875rem;
+}
+.field select { appearance: auto; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.field input:disabled, .field select:disabled { opacity: 0.6; }
+
+/* input กลาง toolbar (search / tags / token) ให้เป็นกล่องแบบเดียวกัน */
+.toolbar input[type="text"], .toolbar input[type="search"], .toolbar input:not([type]),
+.search input {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font-size: 0.875rem;
+}
+.toolbar input:focus, .search input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
+}
 .login-error { color: var(--danger); font-size: 0.8125rem; margin-top: 8px; min-height: 1em; }
 
 /* ── responsive (WEBUI_DESIGN.md §3) ── */
