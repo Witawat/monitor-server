@@ -181,16 +181,19 @@ class _PsutilProvider:
 
     def top_process(self) -> list[TopProcessSample]:
         rows: list[TopProcessSample] = []
-        for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
-            info = p.info
-            rows.append(
-                TopProcessSample(
-                    pid=int(info.get("pid") or 0),
-                    name=str(info.get("name") or ""),
-                    cpu_percent=float(info.get("cpu_percent") or 0.0),
-                    mem_percent=float(info.get("memory_percent") or 0.0),
+        try:
+            for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+                info = p.info
+                rows.append(
+                    TopProcessSample(
+                        pid=int(info.get("pid") or 0),
+                        name=str(info.get("name") or ""),
+                        cpu_percent=float(info.get("cpu_percent") or 0.0),
+                        mem_percent=float(info.get("memory_percent") or 0.0),
+                    )
                 )
-            )
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            pass
         rows.sort(key=lambda x: (x.cpu_percent, x.mem_percent), reverse=True)
         return rows[:5]
 
@@ -226,19 +229,22 @@ class _PsutilProvider:
         if not wanted:
             return []
         result: list[ProcessDetail] = []
-        for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
-            info = p.info
-            name = str(info.get("name") or "")
-            if name.lower() not in wanted:
-                continue
-            result.append(
-                ProcessDetail(
-                    name=name,
-                    pid=int(info.get("pid") or 0),
-                    cpu_percent=float(info.get("cpu_percent") or 0.0),
-                    mem_percent=float(info.get("memory_percent") or 0.0),
+        try:
+            for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+                info = p.info
+                name = str(info.get("name") or "")
+                if name.lower() not in wanted:
+                    continue
+                result.append(
+                    ProcessDetail(
+                        name=name,
+                        pid=int(info.get("pid") or 0),
+                        cpu_percent=float(info.get("cpu_percent") or 0.0),
+                        mem_percent=float(info.get("memory_percent") or 0.0),
+                    )
                 )
-            )
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            pass
         return result
 
 
