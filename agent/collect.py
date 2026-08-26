@@ -206,7 +206,7 @@ class _StdlibProvider:
 
         status = MEMORYSTATUSEX()
         status.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):  # type: ignore[attr-defined]  # noqa: E501
             total = int(status.ullTotalPhys)
             avail = int(status.ullAvailPhys)
             used = total - avail
@@ -228,7 +228,7 @@ class _StdlibProvider:
                     continue
                 mount = parts[1].replace("\\040", " ")
                 try:
-                    stat = os.statvfs(mount)  # type: ignore[attr-defined]
+                    stat = os.statvfs(mount)  # type: ignore[attr-defined]  # ไม่มีบน Windows stub
                 except OSError:
                     continue
                 total = stat.f_frsize * stat.f_blocks
@@ -257,7 +257,7 @@ class _StdlibProvider:
             try:
                 import ctypes
 
-                return int(ctypes.windll.kernel32.GetTickCount64() // 1000)
+                return int(ctypes.windll.kernel32.GetTickCount64() // 1000)  # type: ignore[attr-defined]  # noqa: E501
             except (ImportError, AttributeError):
                 pass
         return 0

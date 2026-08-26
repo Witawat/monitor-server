@@ -117,7 +117,7 @@ scripts\test_exe.bat        # หรือ: powershell -ExecutionPolicy Bypass -
 ## ตรวจก่อนส่งงาน
 
 ```powershell
-ruff check .; mypy server agent shared; pytest -q
+ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytest -q
 ```
 
 ## CI / Release อัตโนมัติ

@@ -31,7 +31,9 @@ jobs:
         run: ruff check server agent shared tests
 
       - name: Mypy (type)
-        run: mypy server agent shared
+        # disable unused-ignore: จำเป็นเพราะโค้ด cross-platform (ctypes.windll ไม่มีบน linux stub,
+        # os.statvfs ไม่มีบน windows stub) — ฟ้องคนละที่ตาม platform ที่รัน mypy
+        run: mypy --disable-error-code=unused-ignore server agent shared
 
       - name: Pytest
         run: pytest -q
