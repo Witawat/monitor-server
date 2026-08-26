@@ -27,7 +27,7 @@ max_batch_size = 100           # snapshot สูงสุดต่อ request
 offline_timeout_sec = 60       # ถ้าไม่มี push เกินนี้ → host ถือว่า offline
 
 [storage]
-retention_raw_days = 7         # เก็บ raw นานแค่ไหน
+retention_raw_days = 45        # เก็บ raw/กราฟย้อนหลังได้นานแค่ไหน (default 45 วัน)
 rollup_intervals = ["1m", "5m", "1h", "1d"]   # บีบ raw ไปตาราง rollup
 wal = true
 

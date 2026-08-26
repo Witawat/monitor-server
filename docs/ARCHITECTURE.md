@@ -87,4 +87,4 @@
 - agent ห้าม import `server/` — ใช้แค่ `shared/` ที่บาง (ถ้าจำเป็น)
 - SQLite async: ใช้ WAL mode + 1 writer ต่อเนื่อง กัน lock; rollup ลดขนาดไฟล์
 - interval agent ไม่ควรต่ำเกิน (default 15s) — กัน flood/ขนาด DB โต
-- retention: กำหนดใน config (เช่น เก็บ raw 7d, แล้ว rollup 1m/5m/1h/1d)
+- retention: กำหนดใน config (`retention_raw_days`, default 45) — เก็บ raw/กราฟย้อนหลัง 45 วัน แล้ว rollup 1m/5m/1h/1d

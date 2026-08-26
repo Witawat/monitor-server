@@ -7,9 +7,17 @@
 ## [Unreleased]
 
 ### เพิ่ม
-- โครงโปรเจกต์ + เอกสารออกแบบครบชุด (AGENTS.md, README, PRODUCT, KNOWLEDGE_BASE, docs/ ทั้งหมด, .gitignore)
-- วางแผนสถาปัตยกรรม: server (FastAPI + SQLite) + agent (stdlib push model) + shared schema
-- ยังไม่มีโค้ด functional — ช่วงวางแผน/ออกแบบ
+- WebUI เป็นหน้าเดียวเลื่อนยาว (long page) — ไม่มี sidebar, เมนูนำทาง (Fleet/Alerts/ตั้งค่า) เป็น topnav แนวนอนใน topbar, คลิกการ์ด → เลือก host + scroll ไป section Host
+- input/select/textarea/checkbox เป็นกล่องสไตล์เดียวกันทั้งหมด (rule กลางใน app.css)
+- Fleet: OS icon (linux/windows/mac จาก `platform`) + แถบสถิติ (จำนวน/ออนไลน์/ออฟไลน์/Linux/Windows) เมื่อมีหลาย server
+- กราฟย้อนหลังสูงสุด 45 วัน: `retention_raw_days` default 45 + range 30d/45d ใน API/chart/export
+
+### แก้
+- hostname ค้างว่าง: ingest ใช้ hostname/platform จาก snapshot ถ้า host ถูกสร้างด้วย token ก่อน first push
+- chart: เลือก metric ทีละตัว (chip) + y-axis ตาม unit + format ผ่าน format.js (เดิม plot ทุก metric สีเดียว/ปิด legend อ่านไม่ออก)
+- KPI disk fallback, net arrow (↑=tx/send, ↓=rx/receive), favicon, version แสดงจาก `__version__` จริง
+
+## [0.2.0] - 2026-08-26
 
 ## [0.2.0] - 2026-08-26
 

@@ -156,7 +156,7 @@
 ## เฟส 7 — งานที่เหลือ (rollup + alert rule UI + minor)
 
 ### ทำแล้ว
-- [x] Rollup tables (1m/5m/1h/1d) — `aggregate_rollup` + RollupWorker (background) + `get_metrics` อ่านจาก rollup สำหรับ range กว้าง (6h/1d/7d), fallback raw ถ้ายังไม่มี
+- [x] Rollup tables (1m/5m/1h/1d) — `aggregate_rollup` + RollupWorker (background) + `get_metrics` อ่านจาก rollup สำหรับ range กว้าง (6h/1d/7d/30d/45d), fallback raw ถ้ายังไม่มี
 - [x] Alert rule CRUD UI — ฟอร์มสร้าง/แก้/ลบกฎในหน้า Alerts (เชื่อม `/api/v1/alerts` POST/PUT/DELETE)
 - [x] L2 cookie Secure flag (`webui.secure_cookie`, เปิดเมื่อ HTTPS)
 - [x] L4 disk % ใช้ `f_bavail` (เหมือน df)

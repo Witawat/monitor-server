@@ -153,7 +153,7 @@
 
 ### แนวทางแก้ไข
 1. **Agent Token**: คงเดิม + เพิ่ม host_id ใหม่ auto-fill (optional)
-2. **ข้อมูล server (read-only)**: แสดง `version`, `host:port`, `data_dir`, `log_dir`, `retention_raw_days`, `rollup_intervals` — จาก `/api/status` (รองรับแล้ว)
+2. **ข้อมูล server (read-only)**: แสดง `version`, `host:port`, `data_dir`, `log_dir`, `retention_raw_days`, `rollup_intervals` — ⚠️ `/api/status` คืนแค่ version/host_count/server{host,port,data_dir,log_dir}/ingest{...} ยังไม่มี retention/rollup → **ต้องเพิ่ม field `storage.{retention_raw_days,rollup_intervals}` ใน `/api/status` ก่อน** (งาน server)
 3. **ตั้งค่า alert notifier** (webhook url / telegram bot_token + chat_id):
    - UI แบบฟอร์ม → บันทึกเขียนกลับ config.toml + reload config (อยู่บน server `maintenance`/`config` ฝั่ง)
    - เป็นงานใหญ่ (ต้องเขียน config กลับ) → แยก sub-task / งดทำถ้าเกินขอบเขต
@@ -291,4 +291,4 @@
 | 5 | [ ] ยังไม่ทำ | — |
 | 6 | [ ] ยังไม่ทำ | — |
 | 7 | [ ] ยังไม่ทำ | — |
-| 8 | [x] ทำแล้ว — OS icon + สถิติหลาย server | (ดู git log — commit ล่าสุด) |
+| 8 | [x] ทำแล้ว — OS icon + สถิติหลาย server | `cd5d1ed` |

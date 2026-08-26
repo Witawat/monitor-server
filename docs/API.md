@@ -24,8 +24,8 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 
 ## Hosts
 ### `GET /api/v1/hosts`
-- Query: `?online=bool`, `?tag=key:value`
-- Response: list hosts + `online` (push ภายใน `offline_timeout_sec`) + latest summary (cpu/mem/disk/uptime)
+- Query: `?online=bool` (กรองเฉพาะออนไลน์/ออฟไลน์)
+- Response: list hosts + `online` (push ภายใน `offline_timeout_sec`) + `platform` (`linux`/`windows`) + `tags` + latest summary (cpu/mem/disk/uptime)
 
 ### `GET /api/v1/hosts/{id}`
 - Detail ของ host เดียว + latest snapshot + tags
@@ -35,8 +35,8 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 
 ## Metrics
 ### `GET /api/v1/hosts/{id}/metrics?range=1h&metrics=cpu_percent,memory.percent`
-- `range`: `1h` (raw), `6h`/`1d`/`7d` (rollup อัตโนมัติ), default `1h`
-- `metrics`: list ชื่อ metric, คั่น `,` — ว่าง = คืนค่าหลัก (cpu/mem/disk/net)
+- `range`: `1h` (raw), `6h`/`1d`/`7d`/`30d`/`45d` (rollup อัตโนมัติ), default `1h`
+- `metrics`: list ชื่อ metric คั่น `,` (ต้องอยู่ใน `METRIC_COLUMNS`) — ว่าง = คืน `cpu_percent,memory.percent,load1,load5,load15,uptime`
 - Response:
 ```json
 {
@@ -66,7 +66,7 @@ Status: `400` invalid, `401` ไม่มี auth/token ผิด, `403` ไม�
 ### `DELETE /api/v1/auth/tokens/{host_id}` *(admin)* — revoke
 
 ## Status / misc
-### `GET /api/status` — version, uptime, host count, DB size
+### `GET /api/status` *(admin)* — version, host_count, server{host,port,data_dir,log_dir}, ingest{rate_limit,max_batch_size,offline_timeout}
 ### `GET /api/health` — `{"status":"ok"}` (ไม่ต้อง auth — ใช้ probe service)
 ### `GET /api/v1/hosts/{id}/export?range=1d` *(admin)* — export CSV
 

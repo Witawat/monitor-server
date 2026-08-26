@@ -22,8 +22,8 @@
 
 | หมวด | รายละเอียด |
 |------|------------|
-| Fleet dashboard | รายการ host + การ์ดสถานะ (CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์ + กรอง/search/tag |
-| Per-host dashboard | เลือก host → กราฟย้อนหลัง per metric (rollup 1m/5m/1h/1d) + KPI + service watch |
+| Fleet dashboard | รายการ host + การ์ดสถานะ (OS icon + CPU/RAM/Disk/Net/Uptime) + ออนไลน์/ออฟไลน์ + สถิติรวม + กรอง/search/tag |
+| Per-host dashboard | เลือก host → กราฟย้อนหลัง per metric (rollup 1m/5m/1h/1d) + KPI + service watch + chart flow 1h–45d (ดูย้อนหลัง 45 วัน) |
 | Agent | push model, batch + retry + backoff + queue offline, stdlib-only |
 | Alerting | เงื่อนไข threshold ต่อ host/metric + history + ack + notify (webhook/Telegram) + host-down |
 | Auth/Security | API token ต่อ host (`X-Agent-Token`), rate limit ingest + login, CSP/security headers |

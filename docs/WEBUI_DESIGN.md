@@ -8,7 +8,7 @@
 ## 1. สแต็ก
 - Server-render shell: `server/webui/templates/base.html` (single-page)
 - ส่วนประกอบ: `templates/parts/*.html` — ใช้ `{% include %}`
-- JS: `static/js/app.js` + `dashboard.js` + `alerts.js` + `scale.js` + `format.js` + `i18n.js` (vanilla, สลับ view + UI scale)
+- JS: `static/js/app.js` + `dashboard.js` + `alerts.js` + `scale.js` + `format.js` + `i18n.js` (vanilla, long page scroll + UI scale)
 - Chart: `static/js/chart.umd.min.js` (**local bundle** — ไม่ใช้ CDN)
 - API: `/api/v1/*` (ดู `API.md`)
 - CSS: `static/css/tokens.css` (variables) + `app.css`
@@ -17,23 +17,22 @@
 
 ## 2. App Shell (โครงรวมทุกหน้า)
 
-> **หน้าเดียวเลื่อนยาว (long page)** — ทุก section แสดงพร้อมกันเลื่อนแนวตั้ง ไม่ใช่สลับ view แต่ละ view. Sidebar เป็น anchor scroll ไปยัง section; การ์ด host คลิก → เลือก host + scroll ไป section Host; Host มี dropdown เลือก host (default = host แรก หรือจาก hash `#/host/<id>`).
+> **หน้าเดียวเลื่อนยาว (long page)** — ทุก section แสดงพร้อมกันเลื่อนแนวตั้ง **ไม่มี sidebar**; เมนูนำทาง (Fleet/Alerts/ตั้งค่า) เป็น `.topnav` แนวนอนใน topbar, คลิก → scroll ไป section; การ์ด host คลิก → เลือก host + scroll ไป section Host; Host มี dropdown เลือก host (default = host แรก หรือจาก hash `#/host/<id>`).
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  ● Monitor        🔍 ค้นหา host…        [👤 admin ▼]     │  ← topbar (56px)
-├──────────┬───────────────────────────────────────────────┤
-│  ◉ Fleet  │  Fleet (การ์ด host)                          │  ← scroll ลงต่อเนื่อง
-│  ⚠ Alerts │  Host (dropdown + KPI + chart)               │
-│  ⚙ ตั้งค่า │  Alerts (กฎ + ประวัติ + ฟอร์ม)                │
-│          │   ตั้งค่า (Agent Token)                       │
-├──────────┴───────────────────────────────────────────────┤
+│  ● Monitor   🔍 ค้นหา host…  Fleet Alerts ตั้งค่า  [👤 admin ▼]  │  ← topbar (56px) + topnav
+├──────────────────────────────────────────────────────────┤
+│  Fleet (การ์ด host + สถิติ: จำนวน/ออนไลน์/OS)              │  ← scroll ลงต่อเนื่อง
+│  Host (dropdown + KPI + chart)                           │
+│  Alerts (กฎ + ประวัติ + ฟอร์ม)                            │
+│   ตั้งค่า (Agent Token)                                   │
+├──────────────────────────────────────────────────────────┤
 │  v0.2.0 · 3 host ออนไลน์ · 2 ออฟไลน์                     │  ← status bar
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **Sidebar** (ซ้าย, 200px): nav หลัก — Fleet / Alerts / Settings. คลิก → scroll ไป section. หดเป็นแถบบน (topbar) เมื่อจอ < 768px
-- **Topbar**: logo/ชื่อระบบ + ค้นหา host (กรอง fleet) + เมนูผู้ใช้ (logout)
+- **Topbar**: logo/ชื่อระบบ + ค้นหา host (กรอง fleet) + **`.topnav`** (Fleet/Alerts/ตั้งค่า แนวนอน — ไม่มี sidebar) + เมนูผู้ใช้ (logout). จอเล็ก topnav กะทัดรัดลง
 - **Status bar** (ล่าง): version + สรุป quick count (อ่าน `v{__version__}` จาก server ไม่ hardcode)
 - คลิก host card → `window.Monitor.setHostId(id)` → เลือก host + renderHostView + scroll ไป `#view-host`
 - พื้นที่ content: card grid, padding 16–24px
@@ -71,9 +70,9 @@
 - shadow: เล็กๆ `0 1px 3px rgba(0,0,0,.06)` — การ์ดลอยเบาๆ
 
 ### Responsive
-- **360**: 1 คอลัมน์, sidebar → แถบบน (hamburger), KPI ซ้อนแนวตั้ง
+- **360**: 1 คอลัมน์, topnav กะทัดรัด, KPI ซ้อนแนวตั้ง
 - **768**: 2 คอลัมน์ KPI, fleet 2 การ์ด
-- **1280+**: 3–4 คอลัมน์ fleet, layout เต็ม
+- **1280+**: 3–4 คอลัมน์ fleet, content เต็ม (ไม่มี sidebar)
 
 ### UI Scaling — ขยายทั้งกรอบ (ไม่ใช่แค่ฟอนต์)
 ปรับ **ทั้ง container/grid/card/ระยะ/ฟอนต์** ให้สัดส่วนลื่นไหลตามความละเอียดหน้าจอ (เหมือน zoom ทั้ง UI) — ใช้ **CSS `zoom`** กับ wrapper หลัก
@@ -99,7 +98,7 @@ setScale();
 - ออกแบบ UI ที่ความกว้าง baseline `1280px` → `--ui-scale = 1`
 - จอเล็ก/ใหญ่ → JS คำนวณ `innerWidth / 1280` แล้วตั้ง `--ui-scale` → `zoom` ขยาย/หด **ทั้งกรอบ** (การ์ด, ระยะ, ฟอนต์, grid ขยับพร้อมกัน)
 - กำหนดขอบ `clamp(0.6, …, 1.4)` กันหดเล็กเกิน/โตเกิน
-- **ยังคงมี breakpoints 360/768/1280 ไว้** — `zoom` จัดสัดส่วนส่วนตัว แต่โครงสร้าง (กี่คอลัมน์, sidebar→แถบบน) ยังเป็นหน้าที่ของ media query
+- **ยังคงมี breakpoints 360/768/1280 ไว้** — `zoom` จัดสัดส่วนส่วนตัว แต่โครงสร้าง (กี่คอลัมน์, ขนาด topnav) ยังเป็นหน้าที่ของ media query
 
 **ข้อควรรู้:**
 - `zoom` เป็น non-standard แต่รองรับ Chrome/Edge/Safari + Firefox (126+) — เหมาะกับ dashboard
@@ -153,8 +152,10 @@ setScale();
 ┌───────────────────────────────────────────────────┐
 │ Fleet            [🟢 ออนไลน์] [⚪ ทั้งหมด]   [+เพิ่ม] │
 ├───────────────────────────────────────────────────┤
+│ 5 เครื่อง · 4 ออนไลน์ · 1 ออฟไลน์ · 4 Linux · 1 Win  │  ← สถิติ Fleet
+├───────────────────────────────────────────────────┤
 │ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ │
-│ │ web-01       │ │ db-02        │ │ app-03       │ │
+│ │🖥 web-01     │ │🖥 db-02      │ │🪟 app-03     │ │
 │ │ ● ออนไลน์     │ │ ○ ออฟไลน์    │ │ ● ออนไลน์     │ │
 │ │ CPU ████░░ 42%│ │ CPU ██░░░░ 18%│ │ CPU ███░░░ 33%│ │
 │ │ RAM ████░░ 48%│ │ RAM ██████ 91%│ │ RAM ██░░░░ 25%│ │
@@ -165,15 +166,16 @@ setScale();
 │ (การ์ด grid, คลิก → host-view)                       │
 └───────────────────────────────────────────────────┘
 ```
-- **HostCard**: ชื่อ + badge (🟢 ออนไลน์ / ○ ออฟไลน์) + progress bar CPU/RAM/Disk + Net + uptime
+- **Fleet ด้านบนมีสถิติ**: `N เครื่อง · X ออนไลน์ · Y ออฟไลน์ · L Linux · W Windows` (`#fleetStats`)
+- **HostCard**: OS icon (ได้จาก `platform` → linux/windows/mac) + ชื่อ + badge (🟢 ออนไลน์ / ○ ออฟไลน์) + progress bar CPU/RAM/Disk + Net + uptime
 - ออฟไลน์: การ์ด dim (opacity .6) + badge แดง, ไม่มีค่า net (`—`)
-- filter: tab ออนไลน์/ทั้งหมด + ค้นหาจาก topbar
+- filter: tab ทั้งหมด/ออนไลน์/ออฟไลน์ + ค้นหาจาก topbar + tag filter
 - poll `GET /api/v1/hosts` ทุก ~10s
 
 ### 5.3 Host (dashboard รายเครื่อง)
 ```
 ┌──────────────────────────────────────────────────┐
-│ ← Fleet   web-01   ● ออนไลน์   [1h][6h][1d][7d]   │
+│ ลงตัว  web-01   ● ออนไลน์   [1h][6h][1d][7d][30d][45d]   │
 ├──────────────────────────────────────────────────┤
 │ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐      │
 │ │ CPU 42%│ │ RAM 48%│ │ Disk 20%│ │ Uptime │      │  ← KPI row
@@ -191,7 +193,7 @@ setScale();
 └──────────────────────────────────────────────────┘
 ```
 - **Host** (section ในหน้านี้): dropdown เลือก host + KPI row + metric chips + chart (เลือก metric ทีละตัว กันสเกล) — เปลี่ยน host จาก dropdown หรือคลิกการ์ด Fleet
-- **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector — plot ทีละตัวเดียว)
+- **MetricChart**: line chart, เลือก range (1h raw / 6h,1d,7d,30d,45d rollup), เลือก metric (CPU/RAM/Load/Swap/Processes/Uptime ผ่าน chip selector — plot ทีละตัวเดียว กันสเกลเพี้ยน)
 - alert ที่ active ของ host นี้: แถบเตือนสีแดง/เหลืองด้านบน
 - data: `GET /api/v1/hosts/{id}/metrics?range=...&metrics=<metric>` (ระบุ metric เดียว → แสดงเส้นเดียว + y-axis ตั้งชื่อตาม unit)
 
@@ -216,7 +218,7 @@ setScale();
 │ ตั้งค่า                                            │
 │  Agent Token     [table: host_id | token | revoke]│
 │  Alert Rules     [table: name | metric | op | thr]│
-│  Retention       [7d] [1m/5m/1h/1d]  [บันทึก]      │
+│  Retention       [45d] [1m/5m/1h/1d]  [บันทึก]      │
 │  WebUI           [user/pass/secret]               │
 └──────────────────────────────────────────────────┘
 ```
@@ -238,7 +240,7 @@ setScale();
 |----------------|----------|
 | คลิก HostCard | → host-view (`#/host/<id>`) |
 | คลิก badge/filter tab | กรอง fleet (ออนไลน์/ทั้งหมด) |
-| ปุ่ม range (1h/6h/1d/7d) | โหลด chart ใหม่ (active state ชัดเจน) |
+| ปุ่ม range (1h/6h/1d/7d/30d/45d) | โหลด chart ใหม่ (active state ชัดเจน) |
 | ลบ host / revoke token | **ต้อง confirm dialog** (กันลบพลาด) |
 | บันทึก config | toast "บันทึกแล้ว" + ใช้ทันที |
 | logout | ลบ cookie → กลับ login |
@@ -281,7 +283,7 @@ new Chart(ctx, {
 |-----|-----------|
 | type | `line`, single dataset (ปิด legend) |
 | animation | `false` (ข้อมูล poll ถี่ — กันกระตุก/CPU) |
-| x-axis | time scale, format `HH:mm` (1h) / `dd MMM` (7d) |
+| x-axis | time scale, format `HH:mm` (1h/6h) / `dd MMM` (1d+) |
 | y-axis | `beginAtZero: true` ยกเว้น metric ที่ไม่มีค่าลบ; tick ใช้ `format.js` |
 | tooltip | แสดงค่า + หน่วย (จาก `series[].unit`) — ใช้ `format.js` เหมือนกัน |
 | สี | ใช้ `var(--accent)`; metric อันตราย (เกิน threshold) ใช้ `--danger` |
