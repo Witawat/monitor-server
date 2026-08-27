@@ -6,8 +6,18 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-08-27
+
+### เพิ่ม
+- **Linux binary รองรับ glibc 2.28+**: build บน `manylinux_2_28` (image pin) → ลงได้บน **AlmaLinux/Rocky 8-9, RHEL 8-9, CentOS Stream 9, Ubuntu 20.04+, Debian 11+, Fedora 32+** (เดิม v0.3.0-0.3.2 build บน ubuntu-24.04 ต้อง glibc 2.39+ เท่านั้น)
+- Pipeline Linux: smoke test รัน `--help` ของ binary จริงใน container glibc 2.28 + ตรวจ glibc symbol สูงสุด ≤ 2.28 ก่อน publish (fail ถ้าเกิน)
+- **Release notes เป็นเทมเพลต** `.github/release-notes.md` (asset table + ความรองรับ Linux + quick start + English summary) — แก้ข้อความได้ในไฟล์เดียว
+- Release workflow trigger ได้ด้วยมือ (`workflow_dispatch` + กรอก tag) เผื่อ tag push ไม่ได้ trigger
+
 ### แก้
-- bump `__version__` → 0.3.2 — WebUI/API เคยแสดงผล "v0.2.0" ไม่ตรง release tag (build ถัดไปแสดงผลถูก)
+- bump `__version__` → 0.3.3 — WebUI/API เคยแสดงผล "v0.2.0" ไม่ตรง release tag (build v0.3.2 ที่ปล่อยไปจึงยังโชว์ v0.2.0; build นี้เป็นต้นไปจะตรง)
+- แก้ release notes ของ v0.3.2 บน GitHub (เดิมเคลม glibc 2.35+/Debian 12 — ไม่ตรงจริง)
+- `requirements-build`: ปล่อย pin `pillow<11` (ไม่ใช้ manylinux2014 แล้ว; make_icon ใช้เฉพาะฝั่ง Windows)
 
 ## [0.3.2] - 2026-08-27
 
