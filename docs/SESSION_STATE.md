@@ -6,7 +6,7 @@
 
 ## เวอร์ชัน / commit ล่าสุด
 - Version `0.2.0` · repo public: https://github.com/Witawat/monitor-server (branch `master`)
-- Commit ล่าสุด: (จะ commit หลังรอบนี้ — alert badge + filter fleet polish + SSE realtime)
+- Commit ล่าสุด: `92e6888` (feat: alert badge + filter fleet polish + SSE realtime)
 
 ## Objective
 - Build/maintain `monitor-server` (FastAPI + aiosqlite + WebUI) + `monitor-agent` (stdlib-only) → แจกจ่ายเป็น PyInstaller exe (onefile + UPX)
