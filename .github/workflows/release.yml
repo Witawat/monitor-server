@@ -5,25 +5,9 @@ on:
     tags: ["v*"]
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            py_cmd: python
-            py_venv: .venv\Scripts\python.exe
-            py_pip: .venv\Scripts\pip.exe
-            build_script: scripts\build.bat
-            build_shell: cmd
-          - os: ubuntu-latest
-            py_cmd: python3
-            py_venv: .venv/bin/python
-            py_pip: .venv/bin/pip
-            build_script: bash scripts/build.sh
-            build_shell: bash
+  build-windows:
+    name: Build (Windows)
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -34,27 +18,45 @@ jobs:
 
       - name: Create venv + install deps
         run: |
-          ${{ matrix.py_cmd }} -m venv .venv
-          ${{ matrix.py_pip }} install --upgrade pip
-          ${{ matrix.py_pip }} install -r requirements.txt -r requirements-build.txt
+          python -m venv .venv
+          .venv\Scripts\python -m pip install --upgrade pip
+          .venv\Scripts\pip install -r requirements.txt -r requirements-build.txt
 
       - name: Run tests (sanity)
-        run: ${{ matrix.py_venv }} -m pytest -q
+        run: .venv\Scripts\python -m pytest -q
 
-      - name: Build binary
-        shell: ${{ matrix.build_shell }}
-        run: ${{ matrix.build_script }}
+      - name: Build exe
+        shell: cmd
+        run: scripts\build.bat
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.os }}
+          name: binaries-windows
+          path: dist/
+          if-no-files-found: error
+
+  build-linux:
+    name: Build (Linux — manylinux/glibc 2.17)
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux2014_x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (venv + deps + test + PyInstaller)
+        shell: bash
+        run: bash scripts/build-manylinux.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux
           path: dist/
           if-no-files-found: error
 
   release:
     name: Publish release
-    needs: build
+    needs: [build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -76,7 +78,7 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
             --title "${{ github.ref_name }}" \
-            --notes "Automated release of monitor-server + monitor-agent (Windows .exe + Linux ELF)."
+            --notes "Automated release of monitor-server + monitor-agent (Windows .exe + Linux ELF, ครอบคลุม glibc 2.17+ = CentOS 7 ขึ้นไป)."
           gh release upload "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
             dist/monitor-server.exe dist/monitor-agent.exe \
