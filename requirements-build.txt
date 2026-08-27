@@ -1,4 +1,4 @@
 # build exe — ลง dev dependency สำหรับ build (ไม่ใช่ runtime)
-# pillow<11: 11+ เลิกมี manylinux2014 wheel (CentOS 7/glibc 2.17) → build จาก source ล้ม
-pillow<11
+# pillow ใช้เฉพาะ make_icon.py (icon ของ .exe — ฝ่าย Windows เท่านั้น)
+pillow
 pyinstaller
