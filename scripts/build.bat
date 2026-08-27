@@ -7,6 +7,9 @@ rem  Usage:  scripts\build.bat     (from anywhere)
 rem =====================================================================
 cd /d "%~dp0.."
 
+rem กัน UnicodeEncodeError ตอน print ไทยบน console ที่ไม่ใช่ UTF-8 (CI/codepage ต่าง)
+set "PYTHONUTF8=1"
+
 set "PY=.venv\Scripts\python.exe"
 if not exist "%PY%" (
     echo [ERROR] venv not found. Create it first:

@@ -14,6 +14,9 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+# กัน UnicodeEncodeError ตอน print ไทย (make_icon.py) บน locale ที่ไม่ใช่ UTF-8
+export PYTHONUTF8=1
+
 # Python 3.11 ที่มากับ manylinux2014 image
 PY="/opt/python/cp311-cp311/bin/python"
 if [ ! -x "$PY" ]; then
