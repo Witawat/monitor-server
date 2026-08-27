@@ -5,11 +5,25 @@ on:
     tags: ["v*"]
 
 jobs:
-  build-release:
-    name: Build exe + publish release
-    runs-on: windows-latest
-    permissions:
-      contents: write
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            py_cmd: python
+            py_venv: .venv\Scripts\python.exe
+            py_pip: .venv\Scripts\pip.exe
+            build_script: scripts\build.bat
+            build_shell: cmd
+          - os: ubuntu-latest
+            py_cmd: python3
+            py_venv: .venv/bin/python
+            py_pip: .venv/bin/pip
+            build_script: bash scripts/build.sh
+            build_shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -18,29 +32,52 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Create venv + install build deps
+      - name: Create venv + install deps
         run: |
-          python -m venv .venv
-          .venv\Scripts\python -m pip install --upgrade pip
-          .venv\Scripts\pip install -r requirements.txt -r requirements-build.txt
+          ${{ matrix.py_cmd }} -m venv .venv
+          ${{ matrix.py_pip }} install --upgrade pip
+          ${{ matrix.py_pip }} install -r requirements.txt -r requirements-build.txt
 
       - name: Run tests (sanity)
-        run: |
-          .venv\Scripts\python -m pytest -q
+        run: ${{ matrix.py_venv }} -m pytest -q
 
-      - name: Build exe (icon + UPX + PyInstaller)
-        run: scripts\build.bat
-        shell: cmd
+      - name: Build binary
+        shell: ${{ matrix.build_shell }}
+        run: ${{ matrix.build_script }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          gh release create "${{ github.ref_name }}" `
-            --repo "${{ github.repository }}" `
-            --title "${{ github.ref_name }}" `
-            --notes "Automated release of monitor-server + monitor-agent."
-          gh release upload "${{ github.ref_name }}" `
-            --repo "${{ github.repository }}" `
-            dist\monitor-server.exe dist\monitor-agent.exe --clobber
-        shell: pwsh
+          ls -l dist/
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "Automated release of monitor-server + monitor-agent (Windows .exe + Linux ELF)."
+          gh release upload "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            dist/monitor-server.exe dist/monitor-agent.exe \
+            dist/monitor-server dist/monitor-agent --clobber
