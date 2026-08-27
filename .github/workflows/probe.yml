@@ -1,0 +1,30 @@
+name: probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe manylinux images
+        run: |
+          for IMG in "quay.io/pypa/manylinux_2_28_x86_64:2024-12-28-cb8bb90" "quay.io/pypa/manylinux_2_28_x86_64:2026.01.04-1"; do
+            echo "===== $IMG ====="
+            docker run --rm "$IMG" bash -c '
+              echo "--- os ---"; grep PRETTY /etc/os-release
+              echo "--- /opt/python ---"; ls /opt/python
+              for p in /opt/python/cp3*-cp3*/bin/python; do
+                V=$(basename $(dirname $(dirname $p)))
+                D=$(dirname $(dirname $p))
+                LIB=$(ls $D/lib/libpython*.so* 2>/dev/null | head -1)
+                LIB64=$(ls $D/lib64/libpython*.so* 2>/dev/null | head -1)
+                echo "$V: $($p --version 2>&1) lib=${LIB:-NONE} lib64=${LIB64:-NONE}"
+              done
+              echo "--- yum ---"; command -v yum || echo "no yum"
+              yum list available python3.11 2>/dev/null | tail -2 || true
+              echo "--- gcc ---"; command -v gcc && gcc --version | head -1 || echo "no gcc"
+            ' || echo "[probe] docker run failed for $IMG"
+          done
