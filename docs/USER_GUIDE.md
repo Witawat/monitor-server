@@ -78,6 +78,14 @@ monitor-agent.exe --uninstall
 > 💡 **dev** (มีซอร์สโค้ด): ใช้ `python -m agent.agent ...` แทน `monitor-agent.exe` — ดู §4.2.
 > `--install` สร้าง service Windows (NSSM) / Linux (systemd).
 
+**Linux** (binary จาก GitHub Releases — glibc 2.28+):
+```bash
+chmod +x monitor-agent
+sudo ./monitor-agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+# ลบ service
+sudo ./monitor-agent --uninstall
+```
+
 ---
 
 ## 3. ติดตั้งและรัน Server
@@ -105,6 +113,12 @@ monitor-server.exe --config "D:\path\config.toml"
 ```
 
 **ไฟล์ runtime อยู่ข้าง exe**: `config.toml` + `data/` + `logs/` ถูกสร้าง/ใช้**ข้างตัว exe** (resolve ข้าง `dist\` เสมอ ไม่ใช่ cwd ไม่ต้อง `cd` ไปที่อื่น) — ครั้งแรกที่รันถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin.
+
+**Linux** (binary จาก GitHub Releases — glibc 2.28+):
+```bash
+chmod +x monitor-server
+./monitor-server                # หรือ ./monitor-server --no-browser
+```
 
 ### 3.3 Config (config.toml)
 
@@ -375,6 +389,7 @@ sudo bash scripts/install-agent.sh <server_url> <token> [interval]
 | ลง service ไม่ได้ (Windows) | ต้องติดตั้ง **NSSM** ก่อน อยู่ใน PATH |
 | รันแล้วหน้า WebUI ไม่เปิด | ลองเปิดเอง `http://127.0.0.1:<port>/` หรือเพิ่ม `--no-browser` เพื่อลดข้อผิดพลาด |
 | port ที่เฝ้าแสดงปิดผิด | agent ใช้ `127.0.0.1` — บริการที่ bind เฉพาะที่อยู่ (ไม่ใช่ localhost/all) จะไม่เห็น |
+| Linux: `error: GLIBC_2.xx not found` | binary เก่า (≤ v0.3.2 ต้อง glibc 2.39+) — ใช้ binary จาก **v0.3.3+** (glibc 2.28+) |
 
 ---
 

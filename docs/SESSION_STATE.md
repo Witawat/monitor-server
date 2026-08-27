@@ -55,6 +55,7 @@
   - `requirements-build.txt`: ปลด pin pillow (Pillow 12 ใช้ได้กับ make_icon.py)
   - verify: probe workflow รัน script ฉบับเต็มผ่าน → re-tag v0.3.3 ที่ `8ba007d` → release run 33052825280 ผ่านทุก job · asset 4 · GLIBC symbol สูงสุด **2.14** · 109 passed · smoke test OK ใน container glibc 2.28 · notes แทนที่ version ถูก
   - commit: `8ba007d` (+ probe workflow ที่ลบแล้ว)
+  - **อัปเดตเอกสารทุกไฟล์ให้ตรง reality** (รอบนี้): `pyproject.toml` version 0.2.0→0.3.3 (ค้างมาหลาย version) · README (badge 0.3.3, Linux production, build/CI 4 binaries, LICENSE) · BUILD.md (ส่วนใหม่ §Linux binary — CI only + build-manylinux.sh + ทำไมต้อง --enable-shared) · DEPLOYMENT.md (binary deploy + CI 4 assets) · USER_GUIDE.md (Linux install/run + troubleshooting GLIBC) · DEVELOPMENT.md · AGENTS.md (build CI Linux + release notes template) · build.sh (header: dev only, release ใช้ build-manylinux.sh)
 
 ## Active / งานที่ทำได้ต่อ (ยังไม่ทำ)
 - i18n ธีม/ข้อความ WebUI (ข้ามมา 4 รอบแล้ว — ทำได้ถ้าต้องการ)

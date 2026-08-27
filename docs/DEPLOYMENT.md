@@ -25,6 +25,7 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 sudo systemctl enable --now monitor-server
 ```
+> ถ้าใช้ **binary จาก GitHub Release** (ไม่ต้องมี Python): `ExecStart=/opt/monitor-server/monitor-server` — config/data/logs ถูกสร้างข้างไฟล์ binary อัตโนมัติ (glibc 2.28+)
 
 ### Windows (NSSM หรือ Windows Service)
 - NSSM (ง่าย, ไม่ต้องเขียนโค้ด service):
@@ -55,7 +56,7 @@ WantedBy=multi-user.target
 ```bash
 sudo systemctl enable --now monitor-agent
 ```
-> ถ้าใช้ PyInstaller binary (ทาง B ใน `BUILD.md`): `ExecStart=/opt/monitor-agent/monitor-agent --server ...`
+> ถ้าใช้ **binary จาก GitHub Release** (ไม่ต้องมี Python): `ExecStart=/opt/monitor-agent/monitor-agent --server ...` (glibc 2.28+)
 
 ### Windows (NSSM)
 ```powershell
@@ -72,8 +73,8 @@ nssm start MonitorAgent
 
 ## CI / Release
 - CI วิ่งบนทุก push/PR (`.github/workflows/ci.yml`) — `ruff`+`mypy`+`pytest` py3.11/3.12 (กัน regression)
-- release: push tag `v*` → `release.yml` build `monitor-server.exe` + `monitor-agent.exe` (Windows) + publish release พร้อมแนบ exe (`gh release`)
-- หลัง bump version ใน `pyproject.toml`/`CHANGELOG.md` → `git tag v0.3.0 && git push origin v0.3.0`
+- release: push tag `v*` → `release.yml` build **4 binaries** — Windows `.exe` ×2 (windows-latest) + Linux ELF ×2 (docker manylinux_2_28, glibc 2.28+) → publish release พร้อมแนบไฟล์ (notes จากเทมเพลต `.github/release-notes.md`)
+- หลัง bump `__version__` (`server/__init__.py`) + `version` (`pyproject.toml`) + `CHANGELOG.md` → `git tag v0.3.3 && git push origin v0.3.3`
 
 ## สิ่งที่ต้องระวัง
 - `config.toml`/`.env`/`*.pem`/`*.key`/`data/*.db`/`logs/` — **ห้าม commit**

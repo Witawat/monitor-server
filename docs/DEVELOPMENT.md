@@ -76,5 +76,5 @@ tests/                          # pytest แบน (testpaths = ["tests"])
 ## งานที่ควรทำเป็นประจำ
 - รัน `ruff --check`/`mypy --disable-error-code=unused-ignore`/`pytest` ก่อน commit ทุกครั้ง (ตรงกับ CI)
 - CI วิ่งอัตโนมัติบน push/PR (`ruff`+`mypy`+`pytest` py3.11/3.12) — ดู `.github/workflows/ci.yml`
-- release: push tag `v*` → `release.yml` สร้าง exe + publish release อัตโนมัติ
+- release: push tag `v*` → `release.yml` สร้าง 4 binaries (Windows `.exe` ×2 + Linux ELF ×2, glibc 2.28+) + publish release อัตโนมัติ
 - ใช้ `run-long.ps1` ถ้ารันคำสั่งที่อาจนาน (test suite ใหญ่/build)

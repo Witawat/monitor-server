@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  Build monitor-server + monitor-agent (PyInstaller onefile) บน Linux
-#  + icon (monitor+pulse)  (ไม่ใช้ UPX — Linux ไม่จำเป็นต้องบีบ)
-#  Usage:  scripts/build.sh     (จากที่ไหนก็ได้)
+#  Build monitor-server + monitor-agent (PyInstaller onefile) บน Linux + icon
 #
-#  หมายเหตุ: PyInstaller สร้าง binary ได้เฉพาะ OS ที่รัน — รันบน Linux
-#  เพื่อให้ได้ ELF binary (ใช้ GitHub Actions ubuntu-latest ก็ได้)
+#  ⚠️  DEV เท่านั้น: glibc ของผลลัพธ์ = glibc ของเครื่องที่ build
+#  (build บน Ubuntu 24.04 = ต้อง glibc 2.39+ — ไม่ได้รองรับ distro เก่า)
+#  Binary สำหรับกระจาย/release ใช้ `scripts/build-manylinux.sh` (CI)
+#  ซึ่ง build บน manylinux_2_28 → glibc 2.28+
+#
+#  Usage:  scripts/build.sh     (จากที่ไหนก็ได้)
 # =====================================================================
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."

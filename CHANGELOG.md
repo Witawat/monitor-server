@@ -18,6 +18,7 @@
 - bump `__version__` → 0.3.3 — WebUI/API เคยแสดงผล "v0.2.0" ไม่ตรง release tag (build v0.3.2 ที่ปล่อยไปจึงยังโชว์ v0.2.0; build นี้เป็นต้นไปจะตรง)
 - แก้ release notes ของ v0.3.2 บน GitHub (เดิมเคลม glibc 2.35+/Debian 12 — ไม่ตรงจริง)
 - `requirements-build`: ปล่อย pin `pillow<11` (ไม่ใช้ manylinux2014 แล้ว; make_icon ใช้เฉพาะฝั่ง Windows)
+- sync `version` ใน `pyproject.toml` → 0.3.3 (ค้าง 0.2.0 มาหลาย version) + อัปเดตเอกสารให้ตรง build manylinux_2_28 (README/BUILD/DEPLOYMENT/USER_GUIDE/DEVELOPMENT/AGENTS + version badge)
 
 ## [0.3.2] - 2026-08-27
 

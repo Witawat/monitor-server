@@ -1,7 +1,7 @@
 [![CI](https://github.com/Witawat/monitor-server/actions/workflows/ci.yml/badge.svg)](https://github.com/Witawat/monitor-server/actions/workflows/ci.yml)
 [![Release](https://github.com/Witawat/monitor-server/actions/workflows/release.yml/badge.svg)](https://github.com/Witawat/monitor-server/actions/workflows/release.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.3.3-blue.svg)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 # monitor-server — ข้ามแพลตฟอร์ม Server Monitoring + WebUI
@@ -25,6 +25,7 @@
 - **Agent**: สคริปต์ Python stdlib ขนาดเล็ก เก็บ CPU/RAM/Disk/Net/Uptime แล้ว push เป็น batch พร้อม retry + backoff เมื่อ offline
 - **Server**: FastAPI รับ push → เขียน SQLite (time-series) → แสดง dashboard + กราฟย้อนหลัง + alerting
 - **ข้ามแพลตฟอร์ม**: agent/server รันได้ทั้ง Linux และ Windows; deploy เป็น service (systemd / NSSM)
+- **Linux binary (v0.3.3+)**: build บน `manylinux_2_28` → รองรับ **glibc 2.28+** (Alma/Rocky 8-9, RHEL 8-9, Ubuntu 20.04+, Debian 11+, Fedora 32+)
 
 ## ฟีเจอร์หลัก (ใช้งานได้แล้ว)
 
@@ -73,6 +74,17 @@ python -m venv .venv
 .\dist\monitor-agent.exe --uninstall
 ```
 
+```bash
+# ── PRODUCTION Linux: binary จาก GitHub Releases (glibc 2.28+) ──
+chmod +x monitor-server monitor-agent
+
+# server (เหมือนกันกับ exe — config/data/logs อยู่ข้างไฟล์, ครั้งแรกพิมพ์รหัสผ่าน admin)
+./monitor-server
+
+# agent: ติดตั้งเป็น service (systemd)
+sudo ./monitor-agent --install --server http://127.0.0.1:18080 --token <TOKEN> --interval 15
+```
+
 > ⚠️ **คนได้แค่ `dist\monitor-agent.exe` (ไม่มี python) ใช้คำสั่งข้างบนได้เลย** — ไม่ต้อง `python -m agent.agent`.
 
 ```powershell
@@ -88,7 +100,7 @@ python -m agent.agent --server http://127.0.0.1:18080 --token <TOKEN> --interval
 
 > 💡 **production ใช้ exe ด้านบน** — ตัว `--config config.toml` ที่เห็นในโหมด dev ไม่จำเป็นสำหรับ exe (exe อ่าน config ข้างตัวเองอัตโนมัติ)
 
-## Build EXE (server + agent)
+## Build EXE (server + agent — Windows)
 
 ```powershell
 # ลง dev dep ครั้งแรก
@@ -103,7 +115,7 @@ scripts\build.bat                 # ตัวหลัก — cmd ตรง
 - icon: `scripts/make_icon.py` → `build/monitor.ico` (16–256) · UPX: `scripts/tools/upx/upx.exe` (ดาวน์โหลดอัตโนมัติครั้งแรก)
 - **ไฟล์อยู่ข้าง exe**: รัน exe จากที่ไหนก็ได้ — `config.toml`/`data/`/`logs/` จะถูกสร้าง/ใช้ข้างตัว exe; ครั้งแรกถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin
 - **service**: `monitor-server.exe --service install|start|stop|remove` (NSSM) · agent `--install` สร้าง service เอง (NSSM/systemd) หรือ `scripts\install-agent.ps1` · Linux ใช้ systemd unit
-- ดูรายละเอียดเต็ม: `docs/BUILD.md`
+- **Linux binary**: build โดย CI (ตอน release) — ดู `docs/BUILD.md` §Linux binary
 
 ## ทดสอบ EXE ที่ build
 
@@ -124,8 +136,8 @@ ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytes
 ## CI / Release อัตโนมัติ
 
 - **`.github/workflows/ci.yml`** — ครัน `ruff` + `mypy` + `pytest` บน Python 3.11/3.12 ทุก push/PR → master
-- **`.github/workflows/release.yml`** — เมื่อ push tag `v*` → build `monitor-server.exe` + `monitor-agent.exe` (Windows runner) แล้ว publish GitHub release + attach 2 exe
-- release อัตโนมัติ: `git tag v0.3.0 && git push origin v0.3.0`
+- **`.github/workflows/release.yml`** — เมื่อ push tag `v*` → build **4 binaries**: `monitor-server.exe` + `monitor-agent.exe` (windows-latest) + `monitor-server` + `monitor-agent` (Linux — docker `manylinux_2_28`, **glibc 2.28+**) → publish GitHub release + attach ครบ 4 (notes จากเทมเพลต `.github/release-notes.md`)
+- release อัตโนมัติ: `git tag v0.3.3 && git push origin v0.3.3` (หลัง bump `__version__` + `CHANGELOG.md`)
 
 ## เอกสาร
 
@@ -137,4 +149,4 @@ ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytes
 
 ## License
 
-MIT — ดู `LICENSE` (เพิ่มก่อน release)
+MIT — ดู `LICENSE`

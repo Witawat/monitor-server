@@ -63,10 +63,10 @@ python -m agent.agent --uninstall
 # ตรวจก่อนส่งงาน (ต้องผ่านหมดก่อน PR — CI ก็รันชุดนี้บน py3.11/3.12)
 ruff check .; mypy --disable-error-code=unused-ignore server agent shared; pytest -q
 
-# build EXE (server + agent onefile + icon monitor + UPX ล่าสุด)
+# build EXE (server + agent onefile + icon monitor + UPX ล่าสุด) — Windows
 scripts\build.bat        # ตัวหลัก — รันตรงได้เลย (สร้าง icon + PyInstaller + UPX)
 # หรือ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
-# ลง dev dep ก่อนครั้งแรก: .venv\Scripts\pip install -r requirements-build.txt
+# Linux: build โดย CI ตอน release เท่านั้น (release.yml + scripts/build-manylinux.sh) — ดู docs/BUILD.md
 # ผลลัพธ์ใน dist/: monitor-server.exe + monitor-agent.exe
 
 # ทดสอบ exe ที่ build ว่าใช้งานได้จริงครบทุกอย่าง (health/WebUI/API/agent push)
@@ -93,6 +93,8 @@ scripts\test_exe.bat     # หรือ: powershell -ExecutionPolicy Bypass -Fil
 - **server** ต้อง `--add-data server\webui;server/webui` (ให้ WebUI/templates/static ทำงานใน exe); **agent** รวม `shared/` อัตโนมัติ
 - dep build: `requirements-build.txt` (pillow, pyinstaller) — รายละเอียดเต็มดู `docs/BUILD.md`
 - ผลลัพธ์: `dist/monitor-server.exe` (~22.8MB) + `dist/monitor-agent.exe` (~7.1MB)
+- **Linux release binary (CI เท่านั้น)**: `release.yml` job build-linux — docker `quay.io/pypa/manylinux_2_28_x86_64:2026.01.04-1` + `scripts/build-manylinux.sh` (build CPython 3.11.14 จาก source ด้วย `--enable-shared` — Python ใน image ไม่มี shared lib → PyInstaller ล้ม) → `dist/monitor-server` + `dist/monitor-agent` **glibc 2.28+** (smoke test + ตรวจ GLIBC symbol) — รองรับ Alma/Rocky 8-9, RHEL 8-9, Ubuntu 20.04+, Debian 11+ · `scripts/build.sh` = build dev ในเครื่อง (glibc ตามเครื่อง build — ไม่ใช้กระจาย)
+- **Release notes**: เทมเพลต `.github/release-notes.md` (release.yml แทนที่ version อัตโนมัติ) · trigger ด้วยมือได้ (`workflow_dispatch` + tag)
 - **ไฟล์อยู่ข้าง exe**: `config.toml` + `data/` + `logs/` ถูก resolve ไว้ข้างตัว exe (frozen) — ครั้งแรกที่รันถ้ายังไม่มี config จะสร้าง default + พิมพ์รหัสผ่าน admin (`admin / <random>`) แล้วจัดการต่อได้ทันที
 - **service**: server exe รองรับ `--service install|start|stop|remove` (NSSM ชี้ตัว exe เอง, config/data อยู่ข้าง exe); agent exe ใช้ `scripts\install-agent.ps1` (detect exe) · Linux ใช้ systemd unit ใน `scripts/systemd` + `agent/service`
 
