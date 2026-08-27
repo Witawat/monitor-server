@@ -37,6 +37,7 @@
 - **SSE realtime** (รอบนี้): `server/streaming.py` (SSEHub — event bus, กัน leak + queue เต็ม) + `GET /api/v1/stream` (admin, heartbeat 15s) + broadcast: ingest→hosts+alerts / ack→alerts / host-down(offline.py)→alerts + `initSSE()` ฝั่ง client (backoff reconnect, ลด poll fleet 10s→30s safety net)
 - i18n: **ข้าม** (ผู้ใช้เลือกไม่ทำรอบนี้)
 - **Alert rules ค่าเริ่มต้น + กัน seed ซ้ำ** (รอบนี้): `AlertingConfig.rules` default 3 กฎ (CPU>90% 10m / RAM>90% 10m / Disk>85% 15m, metric `disk.percent`) + `seed_rules_from_config` ใช้ flag `rules_seeded` กันเด้งกลับตอน user ลบกฎหมด (รองรับ install เก่าด้วย) — test_exe 14/14
+- **ตาราง Alerts แสดงช่องแจ้งเตือน** (รอบนี้): เพิ่มคอลัมน์ "แจ้งเตือน" ในตารางกฎ — badge ตามสถานะ (Webhook/Telegram configured+enabled=เขียว, ปิด/ยังไม่ได้ตั้ง=เทา-เหลือง, ไม่เลือก=—) — `loadAlerts` ดึง `/settings/notifiers` เอง render badge ถูกเสมอ — ยืนยัน UI จาก exe จริงด้วย playwright
 
 ## Active / งานที่ทำได้ต่อ (ยังไม่ทำ)
 - กลุ่มที่เหลือจากรายการแนะนำ: dark mode (user ไม่เอา), i18n (ข้ามรอบนี้ — ทำได้ถ้าต้องการ), alert badge+filter fleet+SSE ทำแล้ว

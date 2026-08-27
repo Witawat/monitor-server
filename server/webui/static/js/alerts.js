@@ -1,6 +1,7 @@
 // alerts.js — alerts view + settings (tokens) (WEBUI_DESIGN.md §5.4-5.5)
 (function () {
   const { api, toast, confirmModal } = window.Monitor;
+  let _notifierState = null;   // สถานะ webhook/telegram (configured/enabled) — ใช้แสดง badge ในตารางกฎ
 
   // แสดงข้อมูล server/config (read-only) ที่หน้า ตั้งค่า — จาก /api/status (M5.1)
   function renderServerInfo(st) {
@@ -81,13 +82,32 @@
     } catch (e) { toast('error', e.message); }
   }
 
+  // badge ช่องแจ้งเตือนของกฎ — ตามที่เลือก (notify) + สถานะ configured/enabled ของช่องนั้น
+  function notifyBadgesHtml(notify) {
+    const st = _notifierState || {};
+    const list = Array.isArray(notify) ? notify : [];
+    if (!list.length) return '<span style="color:var(--text-2)">—</span>';
+    return list.map((ch) => {
+      const info = st[ch] || {};
+      const label = ch === 'telegram' ? 'Telegram' : (ch === 'webhook' ? 'Webhook' : ch);
+      if (info.configured) {
+        const cls = info.enabled ? 'online' : 'warn';
+        const extra = info.enabled ? '' : ' (ปิด)';
+        return '<span class="badge ' + cls + '" title="' + escapeHtml(ch) + '">' + escapeHtml(label) + extra + '</span>';
+      }
+      return '<span class="badge warn" title="' + escapeHtml(ch) + ' ยังไม่ได้ตั้งค่า">' + escapeHtml(label) + ' (ยังไม่ได้ตั้ง)</span>';
+    }).join(' ');
+  }
+
   async function loadAlerts() {
     try {
-      const [rules, history, hosts] = await Promise.all([
+      const [rules, history, hosts, notifiers] = await Promise.all([
         api('/api/v1/alerts'),
         api('/api/v1/alerts/history'),
         api('/api/v1/hosts'),
+        api('/api/v1/settings/notifiers'),   // ดึงสถานะช่องแจ้งเตือน — render badge ในตารางกฎ
       ]);
+      _notifierState = notifiers;
       // เติมตัวเลือก host ในฟอร์มกฎ + dropdown กรอง
       const hostSel = document.getElementById('ruleHost');
       hostSel.innerHTML = '<option value="">— ทุก host —</option>' +
@@ -115,8 +135,8 @@
             body.innerHTML = '<p class="empty-note">ยังไม่มีกฎ alert</p>';
             return;
           }
-          body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th><th class="actions"></th></tr></thead><tbody>' +
-            rulesF.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id ? hostName(r.host_id) : 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td>' +
+          body.innerHTML = '<table><thead><tr><th>ชื่อ</th><th>Host</th><th>Metric</th><th>Threshold</th><th>แจ้งเตือน</th><th class="actions"></th></tr></thead><tbody>' +
+            rulesF.map((r) => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.host_id ? hostName(r.host_id) : 'ทุก host') + '</td><td>' + escapeHtml(r.metric) + '</td><td>' + escapeHtml(r.op) + ' ' + escapeHtml(r.threshold) + '</td><td>' + notifyBadgesHtml(r.notify) + '</td>' +
               '<td class="actions"><button class="btn" data-edit="' + r.id + '">แก้</button> <button class="btn danger" data-del="' + r.id + '">ลบ</button></td></tr>').join('') +
             '</tbody></table>';
           body.querySelectorAll('[data-edit]').forEach((btn) => {
@@ -244,6 +264,7 @@
   }
 
   function renderNotifierState(d) {
+    _notifierState = d;   // เก็บไว้ใช้ render badge ช่องแจ้งเตือนในตารางกฎ
     const setBadge = (id, text, cls) => {
       const b = document.getElementById(id);
       if (b) { b.textContent = text; b.className = 'badge' + (cls ? ' ' + cls : ''); }
