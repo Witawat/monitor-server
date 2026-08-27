@@ -78,12 +78,22 @@ class NotifierConfig(BaseModel):
     telegram: dict[str, Any] = Field(default_factory=dict)
 
 
+def _default_rules() -> list[RuleConfig]:
+    """กฎแจ้งเตือนเริ่มต้น — เผื่อ buffer กัน false positive (ยืดหยุ่น, ไม่รบกวน)."""
+
+    return [
+        RuleConfig(name="CPU สูง", metric="cpu_percent", op=">", threshold=90.0, duration="10m"),
+        RuleConfig(name="RAM สูง", metric="memory.percent", op=">", threshold=90.0, duration="10m"),
+        RuleConfig(name="Disk ใกล้เต็ม", metric="disk.percent", op=">", threshold=85.0, duration="15m"),
+    ]
+
+
 class AlertingConfig(BaseModel):
     """การตั้งค่า alerting โดยรวม."""
 
     enabled: bool = True
     notifiers: NotifierConfig = Field(default_factory=NotifierConfig)
-    rules: list[RuleConfig] = Field(default_factory=list)
+    rules: list[RuleConfig] = Field(default_factory=_default_rules)
 
 
 class AuthConfig(BaseModel):

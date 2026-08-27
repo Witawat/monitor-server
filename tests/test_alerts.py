@@ -212,3 +212,40 @@ async def test_count_unacked_history(db):
     assert await db.count_unacked_history() == 2
     await db.ack_history(h1)
     assert await db.count_unacked_history() == 1
+
+
+async def test_seed_rules_first_time(db):
+    """install ใหม่: seed default + ตั้ง flag (กัน seed ซ้ำ)."""
+
+    rules = [{"name": "CPU สูง", "metric": "cpu_percent", "op": ">", "threshold": 90.0, "duration": "10m"}]
+    created = await db.seed_rules_from_config(rules)
+    assert created == 1
+    assert await db.kv_get("rules_seeded") == "1"
+    # seed ซ้ำ → ไม่เติมเพิ่ม (มี flag แล้ว)
+    assert await db.seed_rules_from_config(rules) == 0
+    assert len(await db.list_rules()) == 1
+
+
+async def test_seed_rules_respects_user_deletion(db):
+    """ลบกฎหมดแล้ว restart → seed ไม่โผล่กลับมา (flag ช่วยกัน)."""
+
+    rules = [{"name": "CPU สูง", "metric": "cpu_percent", "op": ">", "threshold": 90.0, "duration": "10m"}]
+    await db.seed_rules_from_config(rules)          # seed ครั้งแรก
+    for rule in await db.list_rules():
+        await db.delete_rule(rule["id"])            # ผู้ใช้ลบกฎหมด
+    assert len(await db.list_rules()) == 0
+    # restart (seed อีกครั้ง) → ไม่เติมเพราะ flag ยังอยู่
+    assert await db.seed_rules_from_config(rules) == 0
+    assert len(await db.list_rules()) == 0
+
+
+async def test_seed_rules_existing_install(db):
+    """อัปเกรดจาก install เก่า (มีกฎแต่ไม่มี flag): ตั้ง flag ไม่ทับกฎเดิม."""
+
+    await db.create_rule({"name": "เก่า", "metric": "cpu_percent", "op": ">", "threshold": 50.0, "duration": "5m"})
+    rules = [{"name": "ใหม่", "metric": "cpu_percent", "op": ">", "threshold": 90.0, "duration": "10m"}]
+    created = await db.seed_rules_from_config(rules)
+    assert created == 0                                   # ไม่ seed ทับ
+    assert await db.kv_get("rules_seeded") == "1"
+    names = [r["name"] for r in await db.list_rules()]
+    assert names == ["เก่า"]                              # กฎเดิมยังอยู่

@@ -1230,14 +1230,27 @@ class Database:
         return cur.rowcount > 0
 
     async def seed_rules_from_config(self, rules: list[dict[str, Any]]) -> int:
-        """เติม rules จาก config ลง DB ถ้ายังไม่มี rule เลย (กัน config หายไป)."""
+        """เติม rules เริ่มต้นจาก config ลง DB ครั้งเดียว (กัน seed ซ้ำ).
 
+        Notes:
+            ใช้ flag `rules_seeded` ใน state_kv ตัดสินใจ — ไม่ใช่แค่นับกฎ
+            (กันกรณีผู้ใช้ลบกฎหมดแล้ว restart → กฎ default เด้งกลับมา).
+            - มี flag แล้ว → ไม่เติมอีก (เคารพการลบของผู้ใช้)
+            - ยังไม่มี flag แต่มีกฎอยู่แล้ว (install เก่า) → ตั้ง flag ไม่ทับกฎเดิม
+            - ยังไม่มี flag + ไม่มีกฎ → เติมกฎจาก config + ตั้ง flag
+        """
+
+        if await self.kv_get("rules_seeded") is not None:
+            return 0
         if await self._rule_count() > 0:
+            # install เดิม — มีกฎอยู่แล้ว (ไม่ได้มาจากการ seed ครั้งนี้) → ไม่ทับ แค่ตั้ง flag
+            await self.kv_set("rules_seeded", "1")
             return 0
         created = 0
         for rule in rules:
             await self.create_rule(rule)
             created += 1
+        await self.kv_set("rules_seeded", "1")
         return created
 
     async def _rule_count(self) -> int:

@@ -128,7 +128,12 @@ try {
     if (-not $metrics.series.cpu_percent.points) { Fail "metrics range=6h empty" }
     Pass "GET metrics range=6h returns series"
 
-    # ---- 4) alerts CRUD ----
+    # ---- 4) alerts: seed default rules + CRUD ----
+    # install ใหม่ (data_dir ใหม่) → ควรมีกฎ default seed ไปแล้ว 3 ตัว (CPU/RAM/Disk)
+    $seedRules = Invoke-RestMethod -Uri "$BaseUrl/api/v1/alerts" -WebSession $sess -TimeoutSec 5
+    if ($seedRules.Count -ne 3) { Fail "default alert rules not seeded ($($seedRules.Count) rules)" }
+    Pass "default alert rules seeded (3 rules)"
+
     $rule = Invoke-WebRequest -Uri "$BaseUrl/api/v1/alerts" -Method Post -Body '{"name":"CPU exe","host_id":"","metric":"cpu_percent","op":">","threshold":90.0,"duration":"5m"}' `
         -ContentType "application/json" -WebSession $sess -UseBasicParsing -TimeoutSec 5
     if ($rule.StatusCode -ne 201) { Fail "create alert rule failed" }
