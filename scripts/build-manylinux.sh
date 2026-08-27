@@ -24,7 +24,7 @@ fi
 echo "== 1) venv + install deps =="
 "$PY" -m venv .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install -r requirements.txt -r requirements-build.txt
+.venv/bin/pip install -r requirements.txt -r requirements-build.txt pytest pytest-asyncio
 
 echo "== 2) tests (sanity) =="
 .venv/bin/python -m pytest -q
