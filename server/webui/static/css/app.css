@@ -48,6 +48,12 @@ body {
 }
 .topnav a:hover { background: var(--accent-soft); color: var(--accent); }
 .topnav a.active { background: var(--accent); color: #fff; }
+.topnav .nav-badge {
+  margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--danger); color: #fff; border-radius: 999px;
+  font-size: 0.6875rem; font-weight: 700; line-height: 1;
+}
 
 /* ── layout (เต็มจอ, ไม่มี sidebar — content ใช้ที่ว่างทั้งหมด) ── */
 .app-root { flex: 1; min-height: 0; }

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -29,6 +29,7 @@ from server.config import AppConfig, load_config
 from server.ingest import IngestService
 from server.maintenance import RetentionWorker, RollupWorker
 from server.storage.db import Database
+from server.streaming import SSEHub
 from server.webui.auth import hash_password, verify_session
 
 _BASE_DIR = Path(__file__).resolve().parent
@@ -147,11 +148,13 @@ def create_app(
         db = Database(data_dir / "monitor.db", rollup_intervals=cfg.storage.rollup_intervals)
         await db.connect()
         app.state.db = db
+        app.state.stream = SSEHub()   # SSE event bus (push host/alert update)
         await db.seed_rules_from_config([r.model_dump() for r in cfg.alerting.rules])
         engine = AlertEngine(db, cfg)
         app.state.alerting = engine
         app.state.ingest = IngestService(db, cfg, engine)
         offline = HostDownMonitor(db, cfg)
+        offline.set_hub(app.state.stream)   # broadcast เมื่อ host-down fire (badge สด)
         app.state.offline = offline
         offline.start()
         retention = RetentionWorker(db, cfg.storage.retention_raw_days)
@@ -262,6 +265,33 @@ def create_app(
                     "rollup_intervals": cfg.storage.rollup_intervals,
                 },
             }
+        )
+
+    @app.get("/api/v1/stream")
+    async def stream(
+        _: Annotated[str, Depends(require_admin)],
+        request: Request,
+    ) -> Response:
+        """SSE endpoint — push event (hosts/alerts) ไป client ที่ subscribe (ต้อง login)."""
+
+        hub: SSEHub = request.app.state.stream
+
+        async def event_gen() -> AsyncIterator[str]:
+            async for ev in hub.events():
+                # heartbeat: ส่ง comment กัน proxy ตัด connection (SSE ignore comment)
+                if ev == "__heartbeat__":
+                    yield ": ping\n\n"
+                else:
+                    yield f"event: {ev}\ndata: {ev}\n\n"
+
+        return StreamingResponse(
+            event_gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",   # กัน nginx buffer SSE
+            },
         )
 
     return app

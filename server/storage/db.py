@@ -1283,6 +1283,13 @@ class Database:
         rows = await self._require().execute_fetchall(sql, tuple(params))
         return [dict(r) for r in rows]
 
+    async def count_unacked_history(self) -> int:
+        """นับ alert ที่ยังไม่ ack (ใช้แสดง badge บน menu)."""
+
+        cur = await self._require().execute("SELECT COUNT(*) AS n FROM alert_history WHERE ack = 0")
+        row = await cur.fetchone()
+        return int(row["n"]) if row is not None else 0
+
     async def ack_history(self, history_id: int) -> bool:
         """ack ประวัติ; คืน True ถ้ามีอยู่."""
 

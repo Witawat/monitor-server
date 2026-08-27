@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from server.api.deps import require_admin
 from server.storage.db import Database
+from server.streaming import EVENT_ALERTS
 
 router = APIRouter(
     prefix="/api/v1/alerts", tags=["alerts"], dependencies=[Depends(require_admin)]
@@ -88,6 +89,14 @@ async def list_history(
     return JSONResponse(await db.list_history(host_id=host_id, rule_id=rule_id, ack=ack))
 
 
+@router.get("/badge")
+async def alert_badge(request: Request) -> JSONResponse:
+    """คืนจำนวน alert ที่ยังไม่ ack (แสดง badge บน menu)."""
+
+    db: Database = request.app.state.db
+    return JSONResponse({"unacked": await db.count_unacked_history()})
+
+
 @router.post("/history/{history_id}/ack")
 async def ack_history(request: Request, history_id: int) -> JSONResponse:
     """ack ประวัติ; 404 ถ้าไม่พบ."""
@@ -95,6 +104,9 @@ async def ack_history(request: Request, history_id: int) -> JSONResponse:
     db: Database = request.app.state.db
     if not await db.ack_history(history_id):
         return JSONResponse({"detail": "ไม่พบประวัติ"}, status_code=404)
+    hub = getattr(request.app.state, "stream", None)
+    if hub is not None:
+        hub.broadcast(EVENT_ALERTS)   # badge/ประวัติเปลี่ยน → push client refresh
     return JSONResponse({"ok": True})
 
 

@@ -124,6 +124,59 @@
     }
   });
 
+  // ── alert badge (จำนวนที่ยังไม่ ack) ──
+  let alertBadgeTimer = null;
+  async function loadAlertBadge() {
+    try {
+      const d = await api('/api/v1/alerts/badge');
+      const nav = document.querySelector('.topnav a[data-nav="alerts"]');
+      if (!nav) return;
+      const old = nav.querySelector('.nav-badge');
+      if (d.unacked > 0) {
+        if (!old) {
+          const b = document.createElement('span');
+          b.className = 'nav-badge';
+          nav.appendChild(b);
+        }
+        nav.querySelector('.nav-badge').textContent = d.unacked > 99 ? '99+' : d.unacked;
+      } else if (old) {
+        old.remove();
+      }
+    } catch (e) { /* เงียบ — badge เป็นส่วนเสริม */ }
+  }
+
+  // ── SSE realtime: push host/alert update (แทน poll ถี่) ──
+  let sse = null;
+  let sseRetry = 0;
+  function initSSE() {
+    if (!('EventSource' in window)) return;
+    if (sse) sse.close();
+    sse = new EventSource('/api/v1/stream');
+    sse.onmessage = () => {};   // กัน unused (ใช้ event ชนิดเฉพาะ)
+    sse.addEventListener('hosts', () => {
+      sseRetry = 0;
+      loadFleet(true);
+      // host detail/KPI ที่กำลังดู สดผ่าน startHostRefresh (poll 5s) อยู่แล้ว —
+      // ไม่ต้อง renderHostView ซ้ำ กันยิง API host+metrics+chart ทุก ingest (หลาย agent = เยอะ)
+    });
+    sse.addEventListener('alerts', () => {
+      sseRetry = 0;
+      loadAlertBadge();
+      // โหลดประวัติ alert ใหม่ เฉพาะเมื่อผู้ใช้กำลังดูหน้า Alerts (กันยิง API เยอะตอนอยู่หน้าอื่น)
+      const alertsNav = document.querySelector('.topnav a[data-nav="alerts"]');
+      if (alertsNav && alertsNav.classList.contains('active') && window.AlertsView) {
+        window.AlertsView.loadAlerts();
+      }
+    });
+    // reconnect แบบ backoff กัน storm (บทเรียน: ระวัง disconnect loop)
+    sse.onerror = () => {
+      sse.close();
+      sse = null;
+      const delay = Math.min(30000, 1000 * Math.pow(2, sseRetry++));
+      setTimeout(initSSE, delay);
+    };
+  }
+
   // ── fleet poll ──
   async function loadFleet(quiet) {
     try {
@@ -142,7 +195,7 @@
     Dashboard.fillHostSelect(fleetData);  // อัปเดต dropdown host ใน dashboard
     Dashboard.renderFleetStats(fleetData); // 统计 Fleet 顶部 (ใช้ข้อมูลทั้งหมด ไม่ใช่ filtered)
     if (fleetTimer) clearInterval(fleetTimer);
-    fleetTimer = setInterval(() => loadFleet(true), 10000);
+    fleetTimer = setInterval(() => loadFleet(true), 30000);   // safety net: poll ช้า (SSE เป็นหลัก)
   }
 
   let currentTag = '';
@@ -176,7 +229,7 @@
     updateFilterStatus();   // 7.1: แสดงว่ากำลังกรองอะไร
   }
 
-  // 7.1: แถบเล็กแจ้งสถานะการกรอง (ออนไลน์/ออฟไลน์ + tag + search)
+  // 7.1: แถบเล็กแจ้งสถานะการกรอง (ออนไลน์/ออฟไลน์ + tag + search) + ตัวนับผลลัพธ์
   function updateFilterStatus() {
     const parts = [];
     if (currentOnline === true) parts.push('ออนไลน์');
@@ -185,7 +238,22 @@
     const q = getSearch();
     if (q) parts.push('"' + q + '"');
     const el = document.getElementById('filterStatus');
-    if (el) el.textContent = parts.length ? 'กรอง: ' + parts.join(' · ') : '';
+    if (!el) return;
+    // นับผลลัพธ์ที่ผ่านการกรอง (คู่กับ renderFleetFiltered)
+    let shown = fleetData.filter((h) => {
+      if (currentOnline === true && !h.online) return false;
+      if (currentOnline === false && h.online) return false;
+      if (currentTag && !(h.tags || []).includes(currentTag)) return false;
+      if (q) {
+        const text = (h.hostname + ' ' + h.host_id).toLowerCase();
+        if (!text.includes(q.toLowerCase())) return false;
+      }
+      return true;
+    }).length;
+    const count = parts.length || fleetData.length !== shown
+      ? 'แสดง ' + shown + ' / ' + fleetData.length + ' เครื่อง'
+      : '';
+    el.textContent = (parts.length ? 'กรอง: ' + parts.join(' · ') + '  —  ' : '') + count;
   }
 
   async function loadTags() {
@@ -240,7 +308,10 @@
     // bind ครั้งเดียว (ไม่ทำซ้ำตอน poll)
     const input = document.getElementById('searchInput');
     if (input) input.oninput = () => renderFleetFiltered();
-    document.getElementById('filterAll').onclick = () => setOnlineFilter(null);
+    document.getElementById('filterAll').onclick = () => {
+      setOnlineFilter(null);
+      setTag('');   // เคลียร์ tag ด้วย (ทั้งหมด = ไม่กรองอะไรเลย)
+    };
     document.getElementById('filterOnline').onclick = () => setOnlineFilter(true);
     document.getElementById('filterOffline').onclick = () => setOnlineFilter(false);
     const refresh = document.getElementById('refreshBtn');
@@ -249,7 +320,11 @@
     if (addHost) addHost.onclick = () => window.Dashboard.openAddHostModal();   // วิซาร์ดเพิ่มเครื่องใหม่
     await loadFleet();
     loadTags();
+    loadAlertBadge();
+    if (alertBadgeTimer) clearInterval(alertBadgeTimer);
+    alertBadgeTimer = setInterval(loadAlertBadge, 30000);
     await initAll();
+    initSSE();   // SSE realtime — push host/alert update (ลด poll)
   });
 
   // expose สำหรับ dashboard.js / alerts.js

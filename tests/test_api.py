@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
 from contextlib import contextmanager
@@ -13,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from server.config import AppConfig
 from server.main import create_app
+from server.streaming import SSEHub
 from server.webui.auth import hash_password, sign_session
 from shared.metric import HEADER_TOKEN
 
@@ -447,3 +449,41 @@ def test_setup_auto_fill(tmp_path):
         assert client.get("/api/v1/auth/setup").status_code == 404
     finally:
         client.__exit__(None, None, None)
+
+
+def test_alert_badge_endpoint(tmp_path):
+    """/api/v1/alerts/badge คืนจำนวน unacked (admin เท่านั้น)."""
+
+    with _client(tmp_path, authed=True) as c:
+        db = c.app.state.db
+        c.portal.call(db.add_history, 1, "h1", "cpu_percent", 95.0, 90.0)
+        c.portal.call(db.add_history, 2, "h2", "cpu_percent", 96.0, 90.0)
+        assert c.get("/api/v1/alerts/badge").json() == {"unacked": 2}
+    with _client(tmp_path, authed=False) as c:
+        assert c.get("/api/v1/alerts/badge").status_code == 401
+
+
+def test_stream_requires_auth(tmp_path):
+    """/api/v1/stream ต้อง login ก่อน (SSE)."""
+
+    with _client(tmp_path, authed=False) as c:
+        assert c.get("/api/v1/stream").status_code == 401
+
+
+def test_sse_hub_broadcast():
+    """SSEHub broadcast/event/unsubscribe ทำงานถูกต้อง (กัน leak)."""
+
+    async def run():
+        hub = SSEHub()
+        # subscriber รับ event ตามลำดับ
+        q = hub.subscribe()
+        hub.broadcast("hosts")
+        hub.broadcast("alerts")
+        assert await q.get() == "hosts"
+        assert await q.get() == "alerts"
+        assert hub.subscriber_count() == 1
+        # unsubscribe ลด count (กัน connection leak)
+        hub.unsubscribe(q)
+        assert hub.subscriber_count() == 0
+
+    asyncio.run(run())

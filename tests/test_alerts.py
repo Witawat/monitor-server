@@ -202,3 +202,13 @@ async def test_ack_history(db):
     assert await db.ack_history(hid) is True
     hist = await db.list_history()
     assert hist[0]["ack"] == 1
+
+
+async def test_count_unacked_history(db):
+    """นับเฉพาะ alert ที่ยังไม่ ack (badge บน menu)."""
+
+    h1 = await db.add_history(1, "h1", "cpu_percent", 95.0, 90.0)
+    await db.add_history(1, "h2", "cpu_percent", 96.0, 90.0)
+    assert await db.count_unacked_history() == 2
+    await db.ack_history(h1)
+    assert await db.count_unacked_history() == 1

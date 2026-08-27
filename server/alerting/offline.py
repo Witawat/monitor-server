@@ -10,6 +10,7 @@ from typing import Any
 from server.alerting.notify import Notifier
 from server.config import AppConfig
 from server.storage.db import Database
+from server.streaming import EVENT_ALERTS
 
 _RULE_ID_OFFLINE = 0  # synthetic rule — ไม่มีใน alert_rules
 
@@ -32,7 +33,13 @@ class HostDownMonitor:
         self._config = config
         self._notifier = notifier or Notifier(config.alerting.notifiers)
         self._check_interval = check_interval
+        self._hub: Any = None   # SSE hub — broadcast alert ใหม่ (set หลังสร้าง app)
         self._task: asyncio.Task[None] | None = None
+
+    def set_hub(self, hub: Any) -> None:
+        """ผูก SSE hub เพื่อ broadcast เมื่อ fire alert (กัน badge ไม่สด)."""
+
+        self._hub = hub
 
     def start(self) -> None:
         """เริ่ม background task (เรียกใน lifespan)."""
@@ -91,4 +98,6 @@ class HostDownMonitor:
             }
             await self._notifier.send(payload)
             fired.append(payload)
+            if self._hub is not None:
+                self._hub.broadcast(EVENT_ALERTS)   # host-down fire → badge/ประวัติสด
         return fired
