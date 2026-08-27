@@ -6,6 +6,26 @@
 
 ## [Unreleased]
 
+### แก้
+- bump `__version__` → 0.3.2 — WebUI/API เคยแสดงผล "v0.2.0" ไม่ตรง release tag (build ถัดไปแสดงผลถูก)
+
+## [0.3.2] - 2026-08-27
+
+### เพิ่ม
+- **Release Linux ELF**: release asset ครบทั้ง 4 (`monitor-server.exe` / `monitor-agent.exe` / `monitor-server` / `monitor-agent`) — v0.3.2 เป็น release แรกที่ publish ผ่านครบ
+
+### แก้
+- Release build (Linux): build ตรงบน ubuntu-latest (ข้าม Docker/manylinux) — pipeline ผ่านทุก job
+  - หมายเหตุ: Linux ELF build บน ubuntu-24.04 (glibc 2.39) → รองรับ Ubuntu 24.04+/Debian 13+/Fedora 40+ — ถ้าต้องการ glibc 2.17/2.30 (Debian 12/Ubuntu 22.04) ต้อง build บน manylinux (ยังไม่ได้ทำ)
+
+## [0.3.1] - 2026-08-27
+
+### แก้
+- Release build (Linux): manylinux2014 → manylinux_2_17 (pillow 11+ ไม่มี wheel manylinux2014 → build source ล้ม)
+  - หมายเหตุ: tag นี้ไม่ได้ publish release (pipeline ยังไม่ผ่าน) — ใช้ v0.3.2 แทน
+
+## [0.3.0] - 2026-08-27
+
 ### เพิ่ม
 - **Metric เพิ่ม (Chunk B)**: agent เก็บ + server แสดง disk I/O rate, top process, host info (OS/version/arch/kernel), cpu cores, NIC status (up/down/ip/mac), process detail (per watch) — KPI แถว host info; ตาราง Process ที่ใช้ทรัพยากรสูง + Network Interfaces (psutil ให้ครบ; stdlib ได้ host_info/cpu_cores/disk_io) [`shared/metric`, `agent/collect`, `server/storage`]
 - **เปลี่ยนรหัสผ่าน** (หน้า ตั้งค่า): ตรวจรหัสเก่า → ตั้งใหม่ (≥ 8 ตัว) → เก็บ hash ใน DB (`state_kv` เหนือกว่า config.toml) — ใช้ได้ทันที ไม่ restart
@@ -23,7 +43,8 @@
 - กราฟย้อนหลังสูงสุด 45 วัน: `retention_raw_days` default 45 + range 30d/45d ใน API/chart/export
 - **Host realtime auto-refresh**: section Host poll `/api/v1/hosts/{id}` + `/metrics` ทุก 5s (range 1h/6h) หรือ 1 นาที (range กว้าง) — KPI/services/ports/chart อัปเดตเอง (Fleet card poll 10s อยู่แล้ว)
 - **วิซาร์ด "+ เพิ่มเครื่องใหม่"**: ปุ่มใน Fleet toolbar → modal ระบุค่า agent (host_id/interval/watch/ports/max-batch พร้อมคำอธิบาย) → สร้าง token + พิมพ์คำสั่ง `--install` ให้คัดลอก (ไม่พึ่งไฟล์ .md); empty state มี "ดูวิธีติดตั้ง agent" (modal) เปิด `/docs/*.md` ที่ 404 → แสดงข้อมูลจากเว็บแทน
-- **CI + Release automation**: `.github/workflows/ci.yml` (ruff+mypy+pytest บน py3.11/3.12) + `release.yml` (push tag `v*` → build exe + publish release ต่อไฟล์)
+- **CI + Release automation**: `.github/workflows/ci.yml` (ruff+mypy+pytest บน py3.11/3.12) + `release.yml` (push tag `v*` → build matrix 2 OS: Windows .exe (windows-latest) + Linux ELF (ubuntu-latest) → publish release ต่อไฟล์)
+  - หมายเหตุ: tag v0.3.0 ยังไม่ได้ publish release (build Linux ยังไม่ผ่าน — แก้ต่อใน v0.3.1/v0.3.2) — ใช้ v0.3.2
 - **README badges** (CI/Release/Python/version/license) + `--no-browser` เปิด WebUI อัตโนมัติแบบไม่บังคับ
 
 ### แก้

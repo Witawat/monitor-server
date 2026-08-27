@@ -37,7 +37,7 @@ jobs:
           if-no-files-found: error
 
   build-linux:
-    name: Build (Linux — glibc 2.35)
+    name: Build (Linux — ubuntu-24.04, glibc 2.39)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,7 +105,7 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
             --title "${{ github.ref_name }}" \
-            --notes "Automated release of monitor-server + monitor-agent (Windows .exe + Linux ELF, Ubuntu 24.04/glibc 2.35+ = Debian 12, Ubuntu 22.04+, Fedora 38+, ..."
+            --notes "Automated release of monitor-server + monitor-agent (Windows .exe + Linux ELF; Linux built on ubuntu-24.04 — requires glibc 2.39+: Ubuntu 24.04+, Debian 13, Fedora 40+; NOT Debian 12/Ubuntu 22.04)"
           gh release upload "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" \
             dist/monitor-server.exe dist/monitor-agent.exe \
