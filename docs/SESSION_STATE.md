@@ -6,7 +6,7 @@
 
 ## เวอร์ชัน / commit ล่าสุด
 - Version `0.2.0` · repo public: https://github.com/Witawat/monitor-server (branch `master`)
-- Commit ล่าสุด: `52e7a26` (feat: alert rules ค่าเริ่มต้น + กัน seed ซ้ำ)
+- Commit ล่าสุด: `7a5e718` (feat(alerts): แสดงช่องแจ้งเตือนในตารางกฎ)
 
 ## Objective
 - Build/maintain `monitor-server` (FastAPI + aiosqlite + WebUI) + `monitor-agent` (stdlib-only) → แจกจ่ายเป็น PyInstaller exe (onefile + UPX)
