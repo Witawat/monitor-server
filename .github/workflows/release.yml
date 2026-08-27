@@ -42,13 +42,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build in manylinux container (glibc 2.17)
+      - name: Build in manylinux_2_17 container (glibc 2.17)
         shell: bash
-        # checkout/upload รันบน host (Node 24); build รันใน container manylinux2014
+        # checkout/upload รันบน host (Node 24); build รันใน container manylinux_2_17
         # (glibc 2.17) → binary ครอบคลุม distro เก่า (CentOS 7 ขึ้นไป)
+        # ใช manylinux_2_17 แทน 2014 — image เก่า rebuild python โดยไมมี shared lib → PyInstaller ล้ม
         run: |
           docker run --rm -v "$PWD":/src -w /src \
-            quay.io/pypa/manylinux2014_x86_64 \
+            quay.io/pypa/manylinux_2_17_x86_64:latest \
             bash scripts/build-manylinux.sh
 
       - name: Upload artifact
